@@ -100,6 +100,7 @@ def _scipy_pearson_result(xs, ys):
         "confidence_level": 0.95,
         "confidence_interval": {"low": None, "high": None},
         "raw": None,
+        "raw_confidence_interval": None,
         "warnings": [],
         "reason": None,
     }
@@ -116,6 +117,7 @@ def _scipy_pearson_result(xs, ys):
         raw = pearsonr(xs, ys, alternative="two-sided")
         interval = raw.confidence_interval(confidence_level=0.95)
     result["raw"] = repr(raw)
+    result["raw_confidence_interval"] = repr(interval)
     result["statistic"] = _number_or_none(raw.statistic)
     result["pvalue"] = _number_or_none(raw.pvalue)
     result["confidence_interval"] = {
