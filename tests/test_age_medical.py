@@ -161,7 +161,8 @@ class TestAgeMedicalRegressions(unittest.TestCase):
         for page,model in pages.items():
             html=(ROOT/"site"/page).read_text(encoding="utf-8")
             self.assertIn("unified.html?model="+model,html)
-        self.assertIn("age65-ols.html",(ROOT/"site"/"index.html").read_text(encoding="utf-8"))
+        self.assertIn("assets/js/sidebar.js",(ROOT/"site"/"index.html").read_text(encoding="utf-8"))
+        self.assertIn("'age65'", (ROOT/"site"/"assets"/"js"/"sidebar.js").read_text(encoding="utf-8"))
 
 
 if __name__ == "__main__":

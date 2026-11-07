@@ -394,6 +394,7 @@
       if(changeModel) {
         const url=new URL(location.href);url.searchParams.set('model',state.model);
         history.replaceState(null,'',url);
+        window.SidebarNav?.updateActive();
       }
     } catch(error) {
       if(token!==run)return;
