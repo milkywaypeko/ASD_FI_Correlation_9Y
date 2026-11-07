@@ -82,12 +82,15 @@ class TestAgeMedicalRegressions(unittest.TestCase):
         all_fit = fit_extended_ols(observations, ("age65_percent",),
                                    "municipal", "전국", 2022)
         type_fit = fit_extended_ols(observations, ("age65_percent",),
-                                    "municipal", "전국", 2022, dtype="지체",
-                                    full_summary=False)
+                                    "municipal", "전국", 2022, dtype="지체")
         self.assertAlmostEqual(all_fit["coefficients"]["age65_percent"]["coef"], 2)
         self.assertAlmostEqual(type_fit["coefficients"]["age65_percent"]["coef"], .15)
         self.assertEqual(type_fit["type"], "지체")
-        self.assertIn("지체", type_fit["raw"])
+        self.assertIn("OLS Regression Results", type_fit["raw"])
+        self.assertIn("Durbin-Watson", type_fit["raw"])
+        self.assertIn("Jarque-Bera", type_fit["raw"])
+        self.assertIn("coef", type_fit["raw"])
+        self.assertIn("std err", type_fit["raw"])
 
     def test_type_missing_values_are_never_zero_filled(self):
         observations = [dict(age65_percent=float(i), rates={
@@ -127,6 +130,13 @@ class TestAgeMedicalRegressions(unittest.TestCase):
                             and m["scope"] == "municipal")
             self.assertEqual(national["n"],12)
             self.assertAlmostEqual(national["coefficients"]["age65_percent"]["coef"],.02)
+            self.assertIn("OLS Regression Results", national["raw"])
+            self.assertIn("Prob (F-statistic)", national["raw"])
+            self.assertIn("Log-Likelihood", national["raw"])
+            self.assertIn("Durbin-Watson", national["raw"])
+            self.assertIn("Jarque-Bera", national["raw"])
+            self.assertIn("Notes:", national["raw"])
+            self.assertNotIn("OLS / 지체", national["raw"])
             province_ols = next(m for m in result["models"] if
                             m["year"] == 2022 and m["scope"] == "provincial")
             self.assertEqual(province_ols["n"],0)
