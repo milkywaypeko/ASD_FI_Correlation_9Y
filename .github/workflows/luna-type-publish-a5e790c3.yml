@@ -1,0 +1,114 @@
+name: Validate and publish disability type OLS data a5e790c3
+on:
+  push:
+    branches: [feature/disability-type-age-medical-a5e790c3]
+    paths: ['.github/workflows/luna-type-publish-a5e790c3.yml']
+permissions:
+  contents: read
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - name: Install requirements and test runner
+        run: python -m pip install -r requirements.txt pytest
+      - name: Execute all existing and type-filtered tests
+        run: PYTHONDONTWRITEBYTECODE=1 python -m pytest -p no:cacheprovider -q tests
+      - name: Rebuild complete static site from original CSV
+        shell: bash
+        run: |
+          python -u build.py --input . --output "$RUNNER_TEMP/typed-site" > "$RUNNER_TEMP/type-build.log" 2>&1 || { tail -n 70 "$RUNNER_TEMP/type-build.log"; exit 1; }
+          tail -n 12 "$RUNNER_TEMP/type-build.log"
+      - name: Validate typed OLS output and package only generated JSON
+        shell: bash
+        run: |
+          python - <<'PY'
+          import json,os,pathlib,tarfile
+          folder=pathlib.Path(os.environ['RUNNER_TEMP'])/'typed-site'/'data'
+          meta=json.loads((folder/'meta.json').read_text(encoding='utf-8'))
+          audit=json.loads((folder/'age_medical_quality.json').read_text(encoding='utf-8'))
+          types=meta['types']
+          expected=set()
+          prefixes=('demographic_multi_models','age65_ols_models','under15_ols_models','medical_ols_models')
+          for index,dtype in enumerate(types):
+            if dtype=='전체': continue
+            for prefix in prefixes:
+              expected.add(f'{prefix}_type_{index:02d}.json')
+          actual={p.name for p in folder.glob('*_type_*.json')}
+          assert len(expected)==64,(len(expected),sorted(expected))
+          assert actual==expected,('files mismatch',sorted(actual^expected))
+          assert len(audit['disability_type_regressions'])==16
+          assert audit['municipal_complete_cases']['after']>2000
+          p=json.loads((folder/'provinces.json').read_text(encoding='utf-8'))
+          assert len(p)==153
+          assert all('complete_types' in row for row in p)
+          for prefix in prefixes:
+            model=json.loads((folder/(prefix+'_type_01.json')).read_text(encoding='utf-8'))
+            assert model['type']=='지체'
+            national=next(r for r in model['models'] if r['scope']=='municipal' and r['region']=='전국' and r['year']==2022 and (r['mode']=='after' or r['mode'] is None))
+            print(prefix,'지체 2022: n',national['n'],'R2',national['r2'])
+            assert national['n']==227 and national['intercept'] is not None
+            combined=json.loads((folder/(prefix+'_type_06.json')).read_text(encoding='utf-8'))
+            c2022=next(r for r in combined['models'] if r['scope']=='municipal' and r['region']=='전국' and r['year']==2022 and (r['mode']=='after' or r['mode'] is None))
+            assert c2022['n']==0
+          paths=[folder/name for name in sorted(expected)]
+          paths.extend((folder/'provinces.json',folder/'age_medical_quality.json'))
+          with tarfile.open('typed-data.tar.gz','w:gz') as archive:
+            for path in paths:
+              archive.add(path,arcname='site/data/'+path.name)
+          print('GENERATED_TYPED_MODELS',len(expected),'AUDITED_FILES',len(paths))
+          PY
+          sha256sum typed-data.tar.gz > typed-data.sha256
+      - uses: actions/upload-artifact@v4
+        with:
+          name: typed-regression-models-a5e790c3
+          path: |
+            typed-data.tar.gz
+            typed-data.sha256
+          retention-days: 1
+  publish:
+    needs: build
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+          ref: ${{ github.sha }}
+      - uses: actions/download-artifact@v4
+        with:
+          name: typed-regression-models-a5e790c3
+      - name: Verify artifact, expected files and branch source identity
+        shell: bash
+        run: |
+          sha256sum -c typed-data.sha256
+          test "$(git rev-parse HEAD)" = "${{ github.sha }}"
+          test "$(git ls-remote origin refs/heads/feature/disability-type-age-medical-a5e790c3 | cut -f1)" = "${{ github.sha }}"
+          python - <<'PY'
+          import tarfile
+          with tarfile.open('typed-data.tar.gz','r:gz') as tar:
+            paths=tar.getnames()
+            assert len(paths)==66
+            assert all(p.startswith('site/data/') and
+                       '/' not in p[len('site/data/'):] and p.endswith('.json') for p in paths)
+          PY
+          tar -xzf typed-data.tar.gz
+          test -s site/data/age_medical_quality.json
+      - name: Publish verified type-level statistical files
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        shell: bash
+        run: |
+          git add site/data/
+          test "$(git diff --cached --name-only | grep -c '^site/data/')" -eq 66
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git commit -m 'build: publish 64 disability-type OLS model datasets'
+          git -c "http.extraheader=AUTHORIZATION: basic $(printf 'x-access-token:%s' "$GITHUB_TOKEN" | base64 -w0)" push origin HEAD:refs/heads/feature/disability-type-age-medical-a5e790c3
