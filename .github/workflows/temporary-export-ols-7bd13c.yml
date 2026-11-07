@@ -1,0 +1,32 @@
+name: Temporary exact source export unified OLS 7bd13c
+on:
+  push:
+    branches: [feature/six-variable-unified-ols-index-20261107]
+    paths: ['.github/workflows/temporary-export-ols-7bd13c.yml']
+permissions:
+  contents: read
+jobs:
+  export:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: 8ee1bc43c77bfcb3e970823dda1b0e50c601b110
+          persist-credentials: false
+      - name: Export Git-verified source
+        shell: bash
+        run: |
+          test "$(git rev-parse HEAD)" = "8ee1bc43c77bfcb3e970823dda1b0e50c601b110"
+          git archive --format=tar HEAD | gzip -6 > exact-main.tar.gz
+          printf '%s\n' "8ee1bc43c77bfcb3e970823dda1b0e50c601b110" > exact-main.sha
+          sha256sum exact-main.tar.gz > exact-main.sha256
+          du -h exact-main.tar.gz
+      - uses: actions/upload-artifact@v4
+        with:
+          name: exact-main-unified-ols-7bd13c
+          path: |
+            exact-main.tar.gz
+            exact-main.sha
+            exact-main.sha256
+          retention-days: 1
