@@ -142,26 +142,25 @@ class TestAgeMedicalRegressions(unittest.TestCase):
             self.assertEqual(province_ols["n"],0)
             self.assertIsNotNone(province_ols["warning"])
 
-    def test_type_filter_controls_every_page_and_csv(self):
-        script=(ROOT/"site"/"assets"/"js"/"age-medical.js").read_text(encoding="utf-8")
-        self.assertIn("r.rates[state.dtype]",script)
-        self.assertNotIn("r.rates['전체']",script)
-        self.assertIn("state.dtype",script)
-        self.assertIn("meta.types.forEach",script)
-        self.assertIn("_type_",script)
-        self.assertIn("r.complete_types.includes(state.dtype)",script)
-        for page in ("age-medical-multi.html","age65-ols.html","under15-ols.html","medical-ols.html"):
-            html=(ROOT/"site"/page).read_text(encoding="utf-8")
-            self.assertIn('id="an-type"',html)
-            self.assertIn('id="an-outcome"',html)
+    def test_unified_type_filters_and_lazy_model_detail(self):
+        script=(ROOT/"site"/"assets"/"js"/"unified.js").read_text(encoding="utf-8")
+        self.assertIn("item.type === state.dtype",script)
+        self.assertIn("state.allTypes",script)
+        self.assertIn("item.shard",script)
+        self.assertIn("detail.observations.length !== item.n",script)
+        self.assertIn("조건부 예측선",script)
+        page=(ROOT/"site"/"unified.html").read_text(encoding="utf-8")
+        for element in ("u-type","u-index-table","u-trend-coef","u-trend-intercept",
+                        "u-trend-r2","u-trend-adjr2","u-trend-pcoef","u-trend-pmodel",
+                        "u-raw","u-observation-export"):
+            self.assertIn('id="'+element+'"',page)
 
-    def test_four_html_pages_exist(self):
-        for page in ("age-medical-multi.html","age65-ols.html","under15-ols.html","medical-ols.html"):
+    def test_legacy_regression_pages_route_to_unified(self):
+        pages={"age-medical-multi.html":"six","age65-ols.html":"age65",
+               "under15-ols.html":"under15","medical-ols.html":"medical"}
+        for page,model in pages.items():
             html=(ROOT/"site"/page).read_text(encoding="utf-8")
-            self.assertIn('id="an-chart"',html)
-            self.assertIn("assets/js/age-medical.js",html)
-            self.assertIn('id="an-coefficients"',html)
-            self.assertIn('id="an-export"',html)
+            self.assertIn("unified.html?model="+model,html)
         self.assertIn("age65-ols.html",(ROOT/"site"/"index.html").read_text(encoding="utf-8"))
 
 
