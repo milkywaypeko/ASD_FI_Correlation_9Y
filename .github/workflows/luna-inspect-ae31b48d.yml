@@ -1,0 +1,37 @@
+name: Temporary age and medical CSV inspection ae31b48d
+on:
+  push:
+    branches: [feature/age-medical-regression-ae31b48d]
+    paths: ['.github/workflows/luna-inspect-ae31b48d.yml']
+permissions:
+  contents: read
+jobs:
+  inspect:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: 6036f15f38c88f58e62b3c23701bae0c1e724c5f
+          persist-credentials: false
+      - name: Report CSV structures
+        shell: bash
+        run: |
+          python - <<'PY'
+          import csv,glob,json
+          from pathlib import Path
+          files=[Path('Statistics/연령(5세)별 주민등록연앙인구.csv')]+[Path(p) for p in sorted(glob.glob('Statistics/시군구*.csv'))]
+          for f in files:
+              for enc in ('utf-8-sig','cp949','euc-kr'):
+                  try:
+                      with f.open(encoding=enc,newline='') as inp: rows=list(csv.reader(inp))
+                      break
+                  except UnicodeDecodeError: continue
+              print('DATASET',f.name,'encoding',enc,'rows',len(rows),'columns',max(map(len,rows)))
+              for i in list(range(min(6,len(rows))))+[7,10,20,30,100]:
+                  if i>=len(rows): continue
+                  r=rows[i]
+                  samples=[(j,r[j][:40]) for j in range(min(len(r),14))]
+                  print('ROW',i,'columns',len(r),'prefix',json.dumps(samples,ensure_ascii=False))
+              print('UNIQUE_FIRST',json.dumps(list(dict.fromkeys(row[0] for row in rows[3:] if row))[:45],ensure_ascii=False))
+              print('UNIQUE_SECOND',json.dumps(list(dict.fromkeys(row[1] for row in rows[3:] if len(row)>1))[:45],ensure_ascii=False))
+          PY
