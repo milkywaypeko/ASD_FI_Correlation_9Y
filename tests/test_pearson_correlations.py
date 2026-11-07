@@ -172,3 +172,26 @@ def test_scipy_and_statsmodels_are_distinct_in_documentation_and_requirements():
     assert "scipy.stats.pearsonr" in quality
     assert "PearsonRResult" in readme
     assert "ConfidenceInterval" in readme
+
+
+def test_simple_regression_top_cards_and_six_variable_correlation_hidden():
+    """Display policy must not modify underlying SciPy/OLS source data."""
+    html = (ROOT / "site/unified.html").read_text(encoding="utf-8")
+    js = (ROOT / "site/assets/js/unified.js").read_text(encoding="utf-8")
+    for name in ("u-slope-card", "u-slope", "u-slope-variable", "u-corr-card",
+                 "u-corr", "u-trend-corr-wrap", "u-scipy-detail"):
+        assert f'id="{name}"' in html
+    assert html.count("data-simple-only") >= 7
+    assert "const isSimple = () => state.model !== 'six'" in js
+    assert "element.style.display = isSimple() ? '' : 'none'" in js
+    assert "text('u-slope',fmt(item.coefficients?.[0], 9))" in js
+    assert "fmt(item.correlations?.[0], 9)" in js
+    assert "if (isSimple()) configs.push(['corr'" in js
+    assert "if (isSimple()) {" in js
+    assert "if (!isSimple()) {" in js
+    assert "if (isSimple()) headers.push('SciPy 피어슨 r'" in js
+    assert "if (isSimple()) values.push(item.correlations?.[i]" in js
+    assert "if (isSimple()) values.push(m?.correlations?.[i]" in js
+    assert "if (!isSimple()) {" in js and "detail.model.raw" in js
+    assert (ROOT / "index.html").read_text(encoding="utf-8").replace(
+        '<base href="./site/">', '', 1) == html
