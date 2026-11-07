@@ -68,16 +68,16 @@
     const line=fitted(current)&&xs.length?[{x:Math.min(...xs),y:current.intercept+current.slope*Math.min(...xs)},
                                       {x:Math.max(...xs),y:current.intercept+current.slope*Math.max(...xs)}]:[];
     Lab.setChart('fb-scatter',{type:'scatter',data:{datasets:[
-      {label:'지자체 관측치',data:obs,pointRadius:state.allYears?3:4,pointHoverRadius:7,pointBackgroundColor:'rgba(33,140,136,.59)',pointBorderColor:'#fff',pointBorderWidth:.6},
-      {type:'line',label:'statsmodels OLS 회귀선',data:line,borderColor:'#e59a5c',backgroundColor:'#e59a5c',pointRadius:0,borderWidth:3,order:0}
+      {label:'지자체 관측치',data:obs,pointRadius:state.allYears?3:4,pointHoverRadius:7,pointBackgroundColor:window.ResearchChartTheme.palette.observationFill,pointBorderColor:'#fff',pointBorderWidth:.6},
+      {type:'line',label:'statsmodels OLS 회귀선',data:line,borderColor:window.ResearchChartTheme.palette.prediction,backgroundColor:window.ResearchChartTheme.palette.prediction,pointRadius:0,borderWidth:3,order:0}
     ]},options:{responsive:true,maintainAspectRatio:false,animation:false,plugins:{legend:{display:false},tooltip:{callbacks:{
       title:items=>items[0]?.raw?.province?`${items[0].raw.province} · ${items[0].raw.district}`:'OLS 예측선',
       label:ctx=>{const r=ctx.raw;return r?.province?[
         `${r.year}년 · 재정자립도(${modeLabel(state.mode)}): ${num(r.x,4)} (0~1)`,
         `합계출산율: ${num(r.y,3)}명/여성`
       ]:`OLS 예측 합계출산율: ${num(ctx.parsed.y,5)}명/여성`;}
-    }}},scales:{x:{type:'linear',title:{display:true,text:`재정자립도 (${modeLabel(state.mode)}, 0~1)`},grid:{color:'#edf0f4'}},
-                 y:{title:{display:true,text:'합계출산율 (명/여성)'},grid:{color:'#edf0f4'}}}}});
+    }}},scales:{x:{type:'linear',title:{display:true,text:`재정자립도 (${modeLabel(state.mode)}, 0~1)`},grid:{color:window.ResearchChartTheme.palette.grid}},
+                 y:{title:{display:true,text:'합계출산율 (명/여성)'},grid:{color:window.ResearchChartTheme.palette.grid}}}}});
     Lab.text('fb-scatter-status',`${obs.length.toLocaleString('ko-KR')}개 유효 관측치 · ${fitted(current)?'Python에서 추정한 OLS 선을 표시합니다.':'추정 가능한 선형회귀가 없습니다.'}`);
   }
   function trends(){
