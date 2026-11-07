@@ -1,0 +1,29 @@
+name: Temporary transport exact main for household regression
+on:
+  push:
+    branches: [feature/household-premium-regressions-20261107]
+    paths: ['.github/workflows/temporary-household-transport.yml']
+permissions:
+  contents: read
+jobs:
+  export:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: c00a5e075cd06f6720773d3c1571b68f5785efbe
+          persist-credentials: false
+      - name: Archive
+        run: |
+          test "$(git rev-parse HEAD)" = "c00a5e075cd06f6720773d3c1571b68f5785efbe"
+          git archive --format=tar HEAD | gzip -5 > checkout.tar.gz
+          echo "c00a5e075cd06f6720773d3c1571b68f5785efbe" > commit.sha
+          sha256sum checkout.tar.gz > checkout.tar.gz.sha256
+      - uses: actions/upload-artifact@v4
+        with:
+          name: household-transport
+          path: |
+            checkout.tar.gz
+            checkout.tar.gz.sha256
+            commit.sha
+          retention-days: 1
