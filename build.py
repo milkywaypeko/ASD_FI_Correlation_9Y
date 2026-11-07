@@ -731,7 +731,7 @@ def build(base: Path, out: Path):
     birth_audit = build_multivariate(stats, out, detail, province_rows)
     birth_ols_audit = build_birth_ols(out, detail, province_rows)
     fiscal_birth_audit = build_fiscal_birth_ols(out, detail, province_rows)
-    expanded_audit = build_expanded_analysis(stats, out, detail, province_rows)
+    expanded_audit = build_expanded_analysis(stats, out, detail, province_rows, TYPES)
     write_json(out / "data" / "municipalities.json", detail)
     write_json(out / "data" / "provinces.json", province_rows)
 
