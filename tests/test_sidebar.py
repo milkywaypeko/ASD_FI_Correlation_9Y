@@ -35,7 +35,7 @@ def test_unique_models_and_legacy_analysis_entries():
         assert script.count(f"['{key}',") == 1, key
     for page in LEGACY:
         assert script.count(f"['{page}',") == 1, page
-    assert "data-nav-key" not in script  # data key set through DOM APIs
+    assert "a.dataset.navKey = key" in script
     assert "aria-current" in script
     assert "window.location.pathname.endsWith('/')" in script
     assert "window.SidebarNav" in script
