@@ -1,0 +1,10 @@
+.an-table-scroll{overflow-x:auto;max-width:100%;margin:14px 0} .an-table-scroll table{border-collapse:collapse;width:100%;font-size:12px;white-space:nowrap}
+.an-table-scroll td,.an-table-scroll th{padding:9px 10px;border-bottom:1px solid var(--line,#dfe5e9);text-align:right}
+.an-table-scroll td:first-child,.an-table-scroll th:first-child{text-align:left}
+.an-table-scroll tbody tr:hover{background:rgba(80,130,160,.06)}
+.an-chart-box{height:410px;min-height:300px;position:relative}
+.an-raw{overflow:auto;white-space:pre;max-height:480px;padding:12px 16px;background:#f5f7f8;border-radius:8px;font-size:11px;line-height:1.35}
+.an-export{border:1px solid #c6d2df;border-radius:8px;padding:10px 14px;background:#fff;cursor:pointer;font:inherit}
+.an-export:hover{background:#eff6fb}
+.sidebar .navigation{overflow-y:auto;max-height:calc(100vh - 235px)}
+@media(max-width:900px){.an-chart-box{height:320px}.sidebar .navigation{max-height:none}}
