@@ -8,8 +8,10 @@ from __future__ import annotations
 
 from collections import defaultdict
 from pathlib import Path
+import gzip
 import json
 import math
+import shutil
 
 from expanded_analysis import PROVINCES, fit_extended_ols
 
@@ -45,11 +47,14 @@ SPECS = {
 
 
 def _save(path: Path, value):
+    """Byte-preserving compact JSON or deterministic gzip (no statistical rounding)."""
     path.parent.mkdir(parents=True, exist_ok=True)
-    path.write_text(
-        json.dumps(value, ensure_ascii=False, separators=(",", ":"), allow_nan=False),
-        encoding="utf-8",
-    )
+    data = json.dumps(value, ensure_ascii=False, separators=(",", ":"),
+                      allow_nan=False).encode("utf-8")
+    if path.suffix == ".gz":
+        path.write_bytes(gzip.compress(data, compresslevel=6, mtime=0))
+    else:
+        path.write_bytes(data)
 
 
 def _finite(value):
@@ -115,6 +120,12 @@ def build_unified_analysis(out: Path, detail: list[dict],
                            provinces: list[dict], types: list[str]):
     """Emit seven regressions, all types/scopes, light indexes and lazy details."""
     results = {}
+    # Build to a reproducible site even when the prior uncompressed 1,258
+    # shards are present. Never touch Statistics/ raw CSVs.
+    data_dir = out / "data"
+    shutil.rmtree(data_dir / "unified_detail", ignore_errors=True)
+    for old in data_dir.glob("unified_index_*.json*"):
+        old.unlink()
     province_groups = defaultdict(list)
     local_groups = defaultdict(list)
     province_aggregate_groups = defaultdict(list)
@@ -135,6 +146,11 @@ def build_unified_analysis(out: Path, detail: list[dict],
         index = []
         total_fitted = 0
         for type_index, dtype in enumerate(types):
+            # Group one disability type into a single compressed asset.
+            # 119 files replace 1,258 tiny per-period JSON documents; detail
+            # stays lazy and all original statsmodels summaries remain exact.
+            shard = f"data/unified_detail/{key}/{type_index:02d}.json.gz"
+            payload = {}
             for period in (*spec["years"], "pooled", "history"):
                 if period == "history":
                     scopes = [("local_history", prov + "|" + dist, rows)
@@ -149,8 +165,6 @@ def build_unified_analysis(out: Path, detail: list[dict],
                                   for province in PROVINCES)
                     scopes.append(("provincial", "전국", subset_prov))
                     model_period = "전기간" if period == "pooled" else period
-                shard = f"data/unified_detail/{key}/{type_index:02d}/{period}.json"
-                payload = {}
                 for mode in (("before", "after") if spec["fiscal"] else (None,)):
                     fields = ((mode,) + spec["fields"] if mode else spec["fields"])
                     for scope, region, rows in scopes:
@@ -163,8 +177,8 @@ def build_unified_analysis(out: Path, detail: list[dict],
                         payload[ident] = full
                         if item["intercept"] is not None:
                             total_fitted += 1
-                _save(out / shard, payload)
-        _save(out / "data" / f"unified_index_{key}.json", index)
+            _save(out / shard, payload)
+        _save(out / "data" / f"unified_index_{key}.json.gz", index)
         results[key] = {
             "models": len(index), "fitted": total_fitted,
             "years": list(spec["years"]), "label": spec["label"],

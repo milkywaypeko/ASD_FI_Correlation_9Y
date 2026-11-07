@@ -333,8 +333,8 @@ python build.py
 
 `python build.py`가 분석 결과와 전체 정적 사이트를 `site/`에 재생성합니다.
 `site/data/unified_manifest.json`은 변수·기간 정의를,
-`site/data/unified_index_<모형>.json`은 전체 유형·지역·연도별 경량 통계표를,
-`site/data/unified_detail/<모형>/<유형번호>/<시점>.json`은 실제
+`site/data/unified_index_<모형>.json.gz`는 전체 유형·지역·연도별 경량 통계표를,
+`site/data/unified_detail/<모형>/<유형번호>.json.gz`는 실제
 statsmodels OLS 원문·완전관측치·예측값·잔차를 담습니다.
 해당 모델은 일치하는 경량 인덱스와 상세 JSON에서 한 번만 적합됩니다.
 구식 5변수 JSON은 빌드 결과에서 제거합니다.
@@ -360,3 +360,24 @@ OLS는 **인과효과의 증거가 아닙니다**. 지역별 인구구조, 재�
 반복관측이나 연도효과를 별도로 통제하지 않습니다. 결측, 행정구역 개편,
 출처 간 집계 기준 차이가 유효 표본 수를 바꿉니다. 추정 불가한 조합은
 표본 부족·공선성·결측에 따른 원문 사유를 표시합니다.
+
+
+### GitHub Pages 대용량 배포 최적화 (2026-11)
+
+2026년 11월 7일의 배포에서는 `actions/deploy-pages@v5`가 `syncing_files`
+상태에서 600초 제한시간을 넘겼습니다. 이 오류는 Python 회귀 추정 실패가 아니라
+정적 파일 배포 단계에서 발생했습니다.
+
+Pages 파일 수와 원본 비압축 용량을 줄이기 위해, **모형 계수·p값·신뢰구간·
+statsmodels OLS 원문·실제 관측치·예측값·잔차는 그대로 보존한 채**,
+모형별 전체 결과 인덱스와 유형별 상세 자료를 gzip으로 저장합니다.
+1,258개 기간별 비압축 JSON 대신 119개 유형별 압축 JSON을 사용합니다.
+브라우저는 사용자가 모형을 선택했을 때만 해당 상세 파일을 내려받으며,
+최신 브라우저의 `DecompressionStream('gzip')`으로 압축을 해제합니다.
+따라서 이 화면에서 압축 자료를 오프라인 조회하려면 gzip 압축 해제를
+지원하는 브라우저와 로컬 정적 HTTP 서버가 필요합니다.
+
+생성 과정에서 이전 `site/data/unified_detail/` 비압축 샤드를 정리하고
+`unified_index_*.json`을 `.json.gz`로 대체합니다.
+새 데이터의 통계 결과는 동일하며, `Statistics/`의 원본 CSV와
+2014년 자료는 어떠한 압축/삭제 대상도 아닙니다.

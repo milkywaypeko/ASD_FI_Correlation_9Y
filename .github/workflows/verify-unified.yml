@@ -3,7 +3,7 @@ name: Verify and stage unified regression site
 on:
   push:
     branches:
-      - feat/unified-six-variable-regression-20261107
+      - fix/pages-compressed-regression-assets-20261108
   pull_request:
     branches:
       - main
@@ -34,12 +34,13 @@ jobs:
         run: |
           python - <<'PY'
           import json
+          import gzip
           from pathlib import Path
           root=Path('site/data')
           manifest=json.loads((root/'unified_manifest.json').read_text(encoding='utf-8'))
           assert set(manifest['models']) == {'six','age65','under15','medical','premium','fertility','fiscal'}
           for key,definition in manifest['models'].items():
-              idx=json.loads((root/f'unified_index_{key}.json').read_text(encoding='utf-8'))
+              idx=json.loads(gzip.decompress((root/f'unified_index_{key}.json.gz').read_bytes()))
               assert idx, key
               assert all(m['year']=='전기간' or m['year'] in definition['years'] for m in idx), key
               if key in ('six','medical','premium'):
@@ -49,26 +50,37 @@ jobs:
                   assert all(len(m['coefficients'])==6 for m in idx)
               fitted=next((m for m in idx if m['intercept'] is not None),None)
               assert fitted is not None, key
-              detail=json.loads((Path('site')/fitted['shard']).read_text(encoding='utf-8'))[fitted['id']]
+              detail=json.loads(gzip.decompress((Path('site')/fitted['shard']).read_bytes()))[fitted['id']]
               assert detail['model']['n']==fitted['n']==len(detail['observations'])
               assert detail['model']['r2']==fitted['r2']
               assert detail['model']['adj_r2']==fitted['adj_r2']
               assert detail['model']['p_model']==fitted['p_model']
               assert 'OLS Regression Results' in detail['model']['raw']
+          assert len(list((root/'unified_detail').rglob('*.json.gz'))) == 7 * 17
+          assert not list((root/'unified_detail').rglob('*.json'))
+          assert not list(root.glob('unified_index_*.json'))
+          site=Path('site')
+          site_files=[p for p in site.rglob('*') if p.is_file()]
+          total_bytes=sum(p.stat().st_size for p in site_files)
+          assert len(site_files)<500, f'Pages has too many files: {len(site_files)}'
+          assert total_bytes<240_000_000, f'Pages has too many bytes: {total_bytes}'
+          print(f'PAGES PAYLOAD: {len(site_files)} files, {total_bytes:,} bytes')
           assert not list(root.glob('demographic_multi_models_*.json'))
           assert not list(root.glob('household_premium_multi_models_*.json'))
           print('UNIFIED MODEL, YEAR, SAMPLE, FULL OLS, AND OBSERVATION CHECKS: PASS')
           PY
+      - name: JavaScript syntax check
+        run: node --check site/assets/js/unified.js
       - name: Run all tests after regeneration
         run: python -m pytest tests -q
       - name: Archive only generated changes for a publishing job
-        if: github.event_name == 'push' && github.ref == 'refs/heads/feat/unified-six-variable-regression-20261107'
+        if: github.event_name == 'push' && github.ref == 'refs/heads/fix/pages-compressed-regression-assets-20261108'
         run: |
           mkdir -p /tmp/unified-output
           cp -a site/data /tmp/unified-output/data
           cp -a index.html /tmp/unified-output/root-index.html
       - name: Upload verified generated output
-        if: github.event_name == 'push' && github.ref == 'refs/heads/feat/unified-six-variable-regression-20261107'
+        if: github.event_name == 'push' && github.ref == 'refs/heads/fix/pages-compressed-regression-assets-20261108'
         uses: actions/upload-artifact@v4
         with:
           name: verified-unified-regression-site
@@ -78,7 +90,7 @@ jobs:
 
   stage-generated-data:
     needs: verify
-    if: github.event_name == 'push' && github.ref == 'refs/heads/feat/unified-six-variable-regression-20261107'
+    if: github.event_name == 'push' && github.ref == 'refs/heads/fix/pages-compressed-regression-assets-20261108'
     runs-on: ubuntu-latest
     timeout-minutes: 20
     permissions:
@@ -103,5 +115,5 @@ jobs:
           git add -A site/data index.html
           if ! git diff --cached --quiet; then
             git commit -m "build: commit verified unified statsmodels JSON and Pages entry"
-            git push origin HEAD:feat/unified-six-variable-regression-20261107
+            git push origin HEAD:fix/pages-compressed-regression-assets-20261108
           fi

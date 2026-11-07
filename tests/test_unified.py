@@ -9,6 +9,22 @@ ROOT = Path(__file__).resolve().parents[1]
 
 
 class TestUnifiedRegression(unittest.TestCase):
+    def test_compressed_json_roundtrip_and_integrity(self):
+        import gzip
+        import json
+        import tempfile
+        from unified_analysis import _save
+        raw = {"raw": "OLS Regression Results\\nβ₀ = 0.123",
+               "observations": [[2015, "서울특별시", 0.4, None]]}
+        with tempfile.TemporaryDirectory() as tmp:
+            path = Path(tmp) / "data" / "detail.json.gz"
+            _save(path, raw)
+            self.assertEqual(json.loads(gzip.decompress(path.read_bytes())), raw)
+            before = path.read_bytes()
+            _save(path, raw)
+            self.assertEqual(before, path.read_bytes(), "gzip output must be reproducible")
+            self.assertFalse((Path(tmp) / "data" / "detail.json").exists())
+
     def test_all_healthcare_models_exclude_2014(self):
         self.assertEqual(HEALTH_YEARS, tuple(range(2015, 2023)))
         for name in ("six", "medical", "premium"):
