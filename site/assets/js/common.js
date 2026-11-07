@@ -41,7 +41,7 @@ const Lab = (() => {
     const canvas=document.getElementById(id);if(!canvas)return;
     charts.set(id,new Chart(canvas,config));
   }
-  function colors() {return {teal:'#218c88',orange:'#e59a5c',grid:'#edf0f4',font:'#8292a3'};}
+  function colors() {const p=window.ResearchChartTheme.palette;return {teal:p.series,orange:p.prediction,grid:p.grid,font:p.text};}
   function trend(id,items,key,title) {
     const c=colors();
     const series=items.map(m=>m&&m[key]!==null?m[key]:null);
