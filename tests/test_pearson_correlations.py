@@ -3,8 +3,9 @@ import math
 from pathlib import Path
 
 import pytest
+from scipy.stats import pearsonr
 
-from unified_analysis import _pearson_correlation, _fit, SPECS
+from unified_analysis import _pearson_correlation, _scipy_pearson_result, _fit, SPECS
 
 ROOT = Path(__file__).resolve().parents[1]
 
@@ -35,6 +36,16 @@ def test_simple_ols_pearson_matches_r_squared_and_observations():
     assert row["correlations"] == pytest.approx([-1.0])
     assert detail["correlations"]["sample_n"] == row["n"]
     assert detail["correlations"]["method"] == "pearson"
+    assert detail["correlations"]["library"] == "scipy.stats.pearsonr"
+    scipy_result = detail["correlations"]["scipy"]["fertility"]
+    assert scipy_result["raw"].startswith("PearsonRResult(")
+    assert scipy_result["raw_confidence_interval"].startswith("ConfidenceInterval(")
+    assert scipy_result["alternative"] == "two-sided"
+    assert scipy_result["pvalue"] == pytest.approx(pearsonr(
+        [row[4] for row in detail["observations"]],
+        [row[3] for row in detail["observations"]]
+    ).pvalue)
+    assert row["correlation_pvalues"] == pytest.approx([scipy_result["pvalue"]])
     assert detail["correlations"]["predictors"]["fertility"] == pytest.approx(-1)
     assert row["r2"] == pytest.approx(row["correlations"][0]**2)
     assert len(detail["observations"]) == row["n"]
@@ -92,6 +103,8 @@ def test_undefined_on_sparse_disability_type_and_collinear_ols():
     assert sparse["intercept"] is None
     assert sparse["correlations"] == [None, None]
     assert details["correlations"]["sample_n"] == 1
+    assert details["correlations"]["scipy"][fields[0]]["raw"] is None
+    assert "표본" in details["correlations"]["scipy"][fields[0]]["reason"]
 
 
 def test_year_policy_and_static_ui_correlation_contract():
@@ -100,11 +113,62 @@ def test_year_policy_and_static_ui_correlation_contract():
     html = (ROOT/"site"/"unified.html").read_text(encoding="utf-8")
     js = (ROOT/"site"/"assets"/"js"/"unified.js").read_text(encoding="utf-8")
     for id_ in ("u-corr", "u-corr-variable", "u-trend-corr",
-                "u-detail-corr", "u-coefficients", "u-index-export"):
+                "u-detail-corr", "u-coefficients", "u-index-export",
+                "u-scipy-raw", "u-scipy-variable", "u-scipy-export",
+                "u-scipy-observation-body"):
         assert f'id="{id_}"' in html
     for fragment in ("result.correlations.sample_n !== item.n",
                      "item.correlations?.[i]", "['corr',",
-                     "m?.correlations?.[i]", "item.correlations?.[i]??null"):
+                     "m?.correlations?.[i]", "item.correlations?.[i]??null",
+                     "result.correlations.scipy?.[field]?.pvalue",
+                     "item.correlation_pvalues?.[i]",
+                     "result.raw_confidence_interval",
+                     "scipy_pearson_pairs_"):
         assert fragment in js
     root = (ROOT/"index.html").read_text(encoding="utf-8")
     assert root.replace('<base href="./site/">', '', 1) == html
+
+
+def test_scipy_pearson_raw_ci_and_two_sided_pvalue():
+    xs = [3.0, 7.0, 11.0, 18.0, 21.0, 24.0, 29.0, 32.0]
+    ys = [0.2, 1.1, 0.5, 1.8, 1.3, 3.1, 2.7, 3.4]
+    scipy = pearsonr(xs, ys, alternative="two-sided")
+    stored = _scipy_pearson_result(xs, ys)
+    assert stored["method"] == "scipy.stats.pearsonr"
+    assert stored["n"] == len(xs)
+    assert stored["statistic"] == pytest.approx(scipy.statistic)
+    assert stored["pvalue"] == pytest.approx(scipy.pvalue)
+    expected_ci = scipy.confidence_interval(confidence_level=0.95)
+    assert stored["confidence_interval"]["low"] == pytest.approx(expected_ci.low)
+    assert stored["confidence_interval"]["high"] == pytest.approx(expected_ci.high)
+    assert stored["raw"] == repr(scipy)
+    assert stored["raw_confidence_interval"] == repr(expected_ci)
+    assert stored["reason"] is None
+
+
+def test_scipy_undefined_inputs_record_reason_not_zero():
+    for xs, ys, hint in [
+        ([], [], "표본"),
+        ([1.], [2.], "표본"),
+        ([3., 3., 3.], [1., 2., 3.], "상수"),
+        ([1., 2., 3.], [5., 5., 5.], "상수")
+    ]:
+        result = _scipy_pearson_result(xs, ys)
+        assert result["statistic"] is None
+        assert result["pvalue"] is None
+        assert result["confidence_interval"] == {"low": None, "high": None}
+        assert hint in result["reason"]
+        assert result["raw"] is None
+        assert result["n"] == len(xs)
+
+
+def test_scipy_and_statsmodels_are_distinct_in_documentation_and_requirements():
+    req = (ROOT / "requirements.txt").read_text(encoding="utf-8")
+    readme = (ROOT / "README.md").read_text(encoding="utf-8")
+    quality = (ROOT / "site/quality.html").read_text(encoding="utf-8")
+    assert "scipy>=" in req
+    assert "statsmodels>=" in req
+    assert "scipy.stats.pearsonr" in readme
+    assert "scipy.stats.pearsonr" in quality
+    assert "PearsonRResult" in readme
+    assert "ConfidenceInterval" in readme
