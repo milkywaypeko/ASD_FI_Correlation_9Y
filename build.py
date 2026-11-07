@@ -738,6 +738,12 @@ def build(base: Path, out: Path):
     for obsolete_prefix in ("demographic_multi_models_", "household_premium_multi_models_"):
         for obsolete in (out / "data").glob(obsolete_prefix + "*.json"):
             obsolete.unlink()
+    # Retired type shards included historical 2014 healthcare regressions;
+    # the new unified shards replace them and cannot contain health 2014.
+    for obsolete in (out / "data").glob("*_models_type_??.json"):
+        obsolete.unlink()
+    for obsolete in ("medical_ols_models_2014.json", "household_premium_ols_models_2014.json"):
+        (out / "data" / obsolete).unlink(missing_ok=True)
     write_json(out / "data" / "municipalities.json", detail)
     write_json(out / "data" / "provinces.json", province_rows)
 
