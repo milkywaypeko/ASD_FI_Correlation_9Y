@@ -24,9 +24,12 @@ def test_one_shared_sidebar_on_all_pages():
 
 def test_root_homepage_contains_same_navigation_script():
     root = (ROOT / "index.html").read_text(encoding="utf-8")
-    homepage = (SITE / "index.html").read_text(encoding="utf-8")
+    homepage = (SITE / "unified.html").read_text(encoding="utf-8")
+    explorer = (SITE / "index.html").read_text(encoding="utf-8")
     assert '<base href="./site/">' in root
     assert root.replace('<base href="./site/">', '', 1) == homepage
+    assert 'assets/js/dashboard.js' in explorer
+    assert 'assets/js/unified.js' in root
 
 
 def test_unique_models_and_legacy_analysis_entries():
