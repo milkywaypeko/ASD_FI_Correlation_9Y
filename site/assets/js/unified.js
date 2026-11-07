@@ -247,9 +247,18 @@
     }
   }
   function scoped(item) {
-    if (state.indexScope!=='all' && item.scope!==state.indexScope) return false;
+    // This is ONE OLS per year / disability / fiscal mode fitted over all
+    // complete-case basic municipalities nationwide. Never mix it up with
+    // 17 separate metropolitan OLS fits or local time-series regressions.
+    const nationwide = state.indexScope === 'national_municipal';
+    if (nationwide) {
+      if (item.scope !== 'municipal' || item.region !== '전국') return false;
+    } else if (state.indexScope !== 'all' && item.scope !== state.indexScope) {
+      return false;
+    }
     if (!state.allTypes && item.type!==state.dtype) return false;
-    if (!state.allRegions && state.province!=='전국' &&
+    // Province restrictions must not exclude nationwide rows in the preset.
+    if (!nationwide && !state.allRegions && state.province!=='전국' &&
         !item.region.includes(state.province) && item.region!=='전국') return false;
     if (spec().fiscal && item.mode!==state.fiscal) return false;
     const q=state.search.trim().toLocaleLowerCase();
@@ -278,6 +287,10 @@
   const col = (key,label,sortable=true) => ({key,label,sortable});
   function drawIndex() {
     order();
+    const national = state.indexScope === 'national_municipal';
+    text('u-index-definition', national
+      ? '전국 기초지자체 전체를 하나의 표본으로 합친 OLS만 표시합니다. 행마다 연도(또는 전체기간) × 장애유형 × 재정자립도 기준별 1개 모형이며, 표본 n은 해당 조건에서 실제 사용된 기초지자체·연도 관측치 수입니다. 광역별 회귀나 기초지자체 개별 시계열은 포함하지 않습니다. 검색·정렬·CSV·Raw·관측치도 이 결과만 따릅니다.'
+      : '표 분석 단위에 따라 전국·광역별 기초지자체 횡단면 OLS, 광역지자체 간 OLS, 기초지자체 시계열 OLS를 구분합니다. 전국 기초지자체 통합 OLS만 보려면 위 선택기를 변경하세요.');
     const columns=[
       col('year','시점'),col('type','장애유형'),col('scope','분석 단위'),
       col('region','광역/기초'),col('n','표본 n'),
