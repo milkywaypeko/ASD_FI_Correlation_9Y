@@ -115,7 +115,12 @@
         result.model.intercept !== item.intercept ||
         result.model.r2 !== item.r2 ||
         result.model.adj_r2 !== item.adj_r2 ||
-        result.model.p_model !== item.p_model) {
+        result.model.p_model !== item.p_model ||
+        result.correlations.sample_n !== item.n ||
+        result.correlations.predictors === undefined ||
+        modelFields(item).some((field, i) =>
+          (result.correlations.predictors[field] ?? null) !==
+          (item.correlations?.[i] ?? null))) {
       throw Error('경량 인덱스와 원문 모형이 일치하지 않습니다.');
     }
     if (result.observations.length !== item.n) throw Error('원문과 관측치 표본 수 불일치');
@@ -125,10 +130,11 @@
   function showCoefficients(item, detail) {
     const body = $('u-coefficients'); body.replaceChildren();
     const model = detail?.model;
-    for (const field of modelFields(item)) {
+    for (const [i, field] of modelFields(item).entries()) {
       const c = model?.coefficients?.[field] || {};
       const tr = document.createElement('tr');
-      for (const value of [label(field), fmt(c.coef, 10), fmt(c.p, 9),
+      for (const value of [label(field), fmt(c.coef, 10),
+                            fmt(item?.correlations?.[i], 9), fmt(c.p, 9),
                             fmt(c.ci?.[0], 9), fmt(c.ci?.[1], 9)]) {
         const td = document.createElement('td'); td.textContent = value; tr.appendChild(td);
       }
@@ -207,6 +213,17 @@
       '개 완전관측치 · 화면에서 150개 표시 · CSV에는 전체 관측치 포함');
     text('u-detail-title', item.type+' / '+item.region.replace('|',' ')+' / '+item.year+
       (item.mode ? ' / '+item.mode : '')+' / n='+item.n);
+    const correlationsBody = $('u-detail-corr');
+    correlationsBody.replaceChildren();
+    modelFields(item).forEach((field, i) => {
+      const row = document.createElement('tr');
+      for (const value of [label(field), fmt(item.correlations?.[i], 10)]) {
+        const cell = document.createElement('td');
+        cell.textContent = value;
+        row.append(cell);
+      }
+      correlationsBody.append(row);
+    });
     text('u-raw',detail.model.raw || detail.model.warning || '모형을 추정할 수 없습니다.');
     $('u-observation-export').disabled=false;
     $('u-observation-export').onclick=()=>download(
@@ -220,6 +237,9 @@
     text('u-raw','상세 모형을 불러오는 중…');
     $('u-observation-export').disabled=true;
     if (!item) {
+      text('u-corr','—');
+      text('u-corr-variable','');
+      $('u-detail-corr').replaceChildren();
       showCoefficients(null,null);
       text('u-raw','해당 선택의 모형이 없습니다.');
       scatter(null,null);
@@ -234,6 +254,8 @@
       text('u-adjr2',fmt(item.adj_r2));
       text('u-pmodel',fmt(item.p_model,9));
       text('u-n',item.n);
+      text('u-corr',fmt(item.correlations?.[state.trendVar], 9));
+      text('u-corr-variable','· '+label(modelFields(item)[state.trendVar]));
       text('u-caption',item.type+' · '+item.region.replace('|',' ')+' · '+item.year);
       text('u-warning',item.warning || '해당 계수는 인과효과가 아니라 관측자료의 통계적 연관성입니다.');
       showCoefficients(item,detail);
@@ -244,6 +266,8 @@
       console.error(error);
       text('u-warning',error.message);
       text('u-raw','상세 모델 로딩 실패: '+error.message);
+      text('u-corr','—');
+      $('u-detail-corr').replaceChildren();
     }
   }
   function scoped(item) {
@@ -300,6 +324,7 @@
     const maxVariables = spec().fiscal ? spec().fields.length+1 : spec().fields.length;
     for(let i=0;i<maxVariables;i++) {
       columns.push(col('beta'+i,'β'+(i+1),false));
+      columns.push(col('corr'+i,'r'+(i+1)+' (Y–X)',false));
       columns.push(col('p'+i,'β'+(i+1)+' p값',false));
     }
     columns.push(col('action','상세',false));
@@ -330,6 +355,7 @@
         } else {
           let value=item[column.key];
           if(column.key.startsWith('beta'))value=item.coefficients[Number(column.key.slice(4))];
+          if(column.key.startsWith('corr'))value=item.correlations?.[Number(column.key.slice(4))];
           if(/^p\d+$/.test(column.key))value=item.pvalues[Number(column.key.slice(1))];
           td.textContent=typeof value==='number'?fmt(value,8):String(value??'—');
         }
@@ -366,7 +392,8 @@
       ['r2',m=>m.r2,'R²'],
       ['adjr2',m=>m.adj_r2,'수정 R²'],
       ['pcoef',m=>m.pvalues[i],'기울기 p값'],
-      ['pmodel',m=>m.p_model,'모형 F p값']
+      ['pmodel',m=>m.p_model,'모형 F p값'],
+      ['corr',m=>m.correlations?.[i],'피어슨 r (Y–X)']
     ];
     for(const [id,value,title] of configs) {
       if(!window.Chart) continue;
@@ -382,11 +409,12 @@
     }
     $('u-trend-export').onclick=()=>download(
       'yearly_regression_'+state.model+'_'+state.dtype+'.csv',
-      [['연도','장애유형','광역/기초','재정자립도 기준','설명변수','기울기 β','절편 β₀','R²','수정 R²','기울기 p값','F검정 모형 p값','표본 n'],
+      [['연도','장애유형','광역/기초','재정자립도 기준','설명변수','기울기 β','피어슨 r (Y–X)','절편 β₀','R²','수정 R²','기울기 p값','F검정 모형 p값','표본 n'],
        ...spec().years.map((year,j)=>{
          const m=rows[j];
          return [year,state.dtype,region(),state.fiscal,fields()[i],
-           valid(m)?m.coefficients[i]:null,valid(m)?m.intercept:null,
+           valid(m)?m.coefficients[i]:null,m?.correlations?.[i]??null,
+           valid(m)?m.intercept:null,
            valid(m)?m.r2:null,valid(m)?m.adj_r2:null,
            valid(m)?m.pvalues[i]:null,valid(m)?m.p_model:null,m?.n??null];
        })]
@@ -440,7 +468,14 @@
     $('u-mode').onchange=e=>{state.fiscal=e.target.value;render();};
     $('u-year').oninput=e=>{state.year=Number(e.target.value);render();};
     $('u-all-years').onchange=e=>{state.pooled=e.target.checked;render();};
-    $('u-trend-var').onchange=e=>{state.trendVar=Number(e.target.value);drawTrends();};
+    $('u-trend-var').onchange=e=>{
+      state.trendVar=Number(e.target.value);
+      drawTrends();
+      if (selected) {
+        text('u-corr',fmt(selected.correlations?.[state.trendVar],9));
+        text('u-corr-variable','· '+label(modelFields(selected)[state.trendVar]));
+      }
+    };
     $('u-search').oninput=e=>{state.search=e.target.value;state.page=0;drawIndex();};
     $('u-index-scope').onchange=e=>{state.indexScope=e.target.value;state.page=0;drawIndex();};
     $('u-all-types').onchange=e=>{state.allTypes=e.target.checked;state.page=0;drawIndex();};
@@ -452,10 +487,10 @@
       download('regression_index_'+state.model+'.csv',
         [['시점','장애유형','분석 단위','광역/기초','재정자립도 기준','표본 n',
           '절편 β₀','R²','수정 R²','모형 F p값',
-          ...Array.from({length:width},(_,i)=>['β'+(i+1),'β'+(i+1)+' p값']).flat(),'상세 파일'],
+          ...Array.from({length:width},(_,i)=>['β'+(i+1),'피어슨 r'+(i+1),'β'+(i+1)+' p값']).flat(),'상세 파일'],
           ...filtered.map(item=>[item.year,item.type,item.scope,item.region,item.mode,
             item.n,item.intercept,item.r2,item.adj_r2,item.p_model,
-            ...item.coefficients.flatMap((beta,i)=>[beta,item.pvalues[i]]),item.shard])]);
+            ...item.coefficients.flatMap((beta,i)=>[beta,item.correlations?.[i]??null,item.pvalues[i]]),item.shard])]);
     };
     render();
   } catch(error) {
