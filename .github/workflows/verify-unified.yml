@@ -94,7 +94,9 @@ jobs:
           site_files=[p for p in site.rglob('*') if p.is_file()]
           total_bytes=sum(p.stat().st_size for p in site_files)
           assert len(site_files)<500, f'Pages has too many files: {len(site_files)}'
-          assert total_bytes<240_000_000, f'Pages has too many bytes: {total_bytes}'
+          # SciPy raw PearsonRResult + per-model 95% CI add about 13 MB to
+          # the previous 236 MB site; keep a finite safety ceiling for Pages.
+          assert total_bytes<280_000_000, f'Pages has too many bytes: {total_bytes}'
           print(f'PAGES PAYLOAD: {len(site_files)} files, {total_bytes:,} bytes')
           assert not list(root.glob('demographic_multi_models_*.json'))
           assert not list(root.glob('household_premium_multi_models_*.json'))
