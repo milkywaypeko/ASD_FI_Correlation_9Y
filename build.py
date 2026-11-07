@@ -332,7 +332,7 @@ def fit_multivariate(obs: list[dict], scope: str, region: str,
 
 
 def build_multivariate(stats: Path, out: Path, detail: list[dict], province_rows: list[dict]):
-    birth, totals, duplicates = parse_birth_rate(stats / "Birth rate.csv")
+    birth, totals, duplicates = parse_birth_rate(stats / "출산율" / "Birth rate.csv")
     missing_local = []
     for r in detail:
         r["fertility"] = birth.get((r["year"], r["province"], r["district"]))
@@ -615,9 +615,9 @@ def write_json(path: Path, data):
 
 def build(base: Path, out: Path):
     stats = base / "Statistics"
-    pop, pop_totals, pe = parse_population(stats / "Resident population.csv")
-    fisc, fiscal_totals, fe = parse_fiscal(stats / "Financial Independence.csv")
-    disabilities, unknown, de = parse_disability(stats / "Disability")
+    pop, pop_totals, pe = parse_population(stats / "인구" / "Resident population.csv")
+    fisc, fiscal_totals, fe = parse_fiscal(stats / "재정" / "Financial Independence.csv")
+    disabilities, unknown, de = parse_disability(stats / "장애인등록" / "Disability")
 
     detail = []
     unmatched = []

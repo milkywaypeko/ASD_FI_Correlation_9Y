@@ -38,7 +38,7 @@ class TestFiscalBirthOLS(unittest.TestCase):
         self.assertIsNone(fit["slope"])
 
     def test_real_csv_fiscal_remains_percent_in_source(self):
-        filename=Path(__file__).resolve().parents[1]/'Statistics'/'Financial Independence.csv'
+        filename=Path(__file__).resolve().parents[1]/'Statistics'/'재정'/'Financial Independence.csv'
         initial=filename.read_bytes()
         local,totals,duplicates=parse_fiscal(filename)
         self.assertEqual(filename.read_bytes(),initial)

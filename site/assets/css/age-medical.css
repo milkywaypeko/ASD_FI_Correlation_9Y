@@ -8,3 +8,8 @@
 .an-export:hover{background:#eff6fb}
 .sidebar .navigation{overflow-y:auto;max-height:calc(100vh - 235px)}
 @media(max-width:900px){.an-chart-box{height:320px}.sidebar .navigation{max-height:none}}
+/* Reusable units-and-methods table: wraps explanatory text on small screens. */
+.unit-guide .unit-table { table-layout: auto; min-width: 760px; width: 100%; white-space: normal; }
+.unit-guide .unit-table th, .unit-guide .unit-table td { text-align: left; vertical-align: top; white-space: normal; min-width: 110px; line-height: 1.55; }
+.unit-guide .unit-table th:nth-child(3), .unit-guide .unit-table th:nth-child(4) { min-width: 200px; }
+.unit-guide .panel-note { margin-top: 14px; line-height: 1.7; }

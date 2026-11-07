@@ -353,7 +353,7 @@ def _emit_models(out: Path, prefix: str, detail: list[dict], provinces: list[dic
 
 def _emit_disability_type_models(out: Path, detail: list[dict], provinces: list[dict],
                                  types: list[str]):
-    """Precompute all 4 regressions per disability type in lazily fetched files.
+    """Precompute all 6 regressions per disability type in lazily fetched files.
 
     Models retain annual, nationwide/provincial, pooled, and locality histories;
     the full statsmodels OLS Regression Results are preserved for every fit.
@@ -369,6 +369,8 @@ def _emit_disability_type_models(out: Path, detail: list[dict], provinces: list[
         "age65_ols_models": (("age65_percent",), False),
         "under15_ols_models": (("under15_percent",), False),
         "medical_ols_models": ((MEDICAL,), False),
+        "household_premium_multi_models": (("age65_percent", "under15_percent", "fertility", MEDICAL, "premium_10k_per_household"), True),
+        "household_premium_ols_models": (("premium_10k_per_household",), False),
     }
     summary = {}
     for index, dtype in enumerate(types):
@@ -414,13 +416,18 @@ def _emit_disability_type_models(out: Path, detail: list[dict], provinces: list[
 
 def build_expanded_analysis(stats: Path, out: Path, detail: list[dict],
                             province_rows: list[dict], disability_types: list[str] | None = None):
-    """Enrich observation rows in-place and write all four requested model sets.
+    """Enrich observation rows in-place and write requested model sets.
 
     Run after build_multivariate(), so its fertility field has already joined.
     Must run before municipalities.json and provinces.json are written.
     """
-    age = parse_age_population(stats / "연령(5세)별 주민등록연앙인구.csv")
-    costs, duplicates = parse_medical_expenses(stats)
+    from insurance_premiums import (parse_insurance_premiums, parse_household_counts,
+                                    household_premium_10k, PREMIUM_FIELD, HOUSEHOLD_FILE)
+    age = parse_age_population(stats / "인구" / "연령(5세)별 주민등록연앙인구.csv")
+    costs, duplicates = parse_medical_expenses(stats / "국가건강정보" / "진료비")
+    premiums, premium_invalid = parse_insurance_premiums(stats / "국가건강정보" / "보험료")
+    household_file = stats / HOUSEHOLD_FILE
+    households = parse_household_counts(household_file)
     all_rows = detail + province_rows
     for row in all_rows:
         key = (row["year"], row["province"], row["district"])
@@ -432,6 +439,11 @@ def build_expanded_analysis(stats: Path, out: Path, detail: list[dict],
         row["medical_total_thousand_krw"] = medical_cost
         row[MEDICAL] = _finite(medical_cost / (10.0 * population)) if (
             medical_cost is not None and population is not None and population > 0) else None
+        premium = premiums.get(key)
+        household_count = households.get(key)
+        row["premium_total_thousand_krw"] = premium
+        row["households"] = household_count
+        row[PREMIUM_FIELD] = household_premium_10k(premium, household_count)
 
     # Keep partial provincial disability aggregations from being treated as
     # complete observations in the new type-filtered models and plots.
@@ -444,16 +456,26 @@ def build_expanded_analysis(stats: Path, out: Path, detail: list[dict],
         row["complete_types"] = [dtype for dtype in disability_types
                                  if members and all(dtype in m["rates"] for m in members)]
 
-    checks = ("age65_percent", "under15_percent", "fertility", MEDICAL)
+    checks = ("age65_percent", "under15_percent", "fertility", MEDICAL, PREMIUM_FIELD)
     audit = {
         "years": list(YEARS),
-        "sources": ["Statistics/연령(5세)별 주민등록연앙인구.csv",
-                    "Statistics/시군구(...)별 연령별 진료현황-전체.csv"],
+        "sources": ["Statistics/인구/연령(5세)별 주민등록연앙인구.csv",
+                    "Statistics/국가건강정보/진료비/시군구(...)별 연령별 진료현황-전체.csv",
+                    "Statistics/국가건강정보/보험료/시군구(...)별 보험료 현황.csv"],
         "denominators": "0~14세·65세 이상 비율의 분모와 의료비 1인당 분모는 해당 연도 주민등록연앙인구(계).",
         "medical_definition": "전체 연령 진료비(천원) × 1000 ÷ 주민등록연앙인구 ÷ 10000 = 만원/인. 급여비·진료인원수 아님.",
         "outcome": "등록 장애인 총수 / 해당 연도 기존 주민등록인구 × 100 (%)",
         "caveat": "동시기 지역 수준의 탐색적 OLS로 인과효과를 의미하지 않음. 연도 통합은 지역 반복측정과 연도효과를 통제하지 않음. 진료비에 비급여가 전부 포함된다는 뜻이 아님.",
         "source_duplicates": duplicates[:50],
+        "premium_source_invalid": premium_invalid[:300],
+        "premium_source_invalid_count": len(premium_invalid),
+        "premium_sources_2014_invalid_note": "2014년 서울·인천·경기·강원 표의 보험료 5항목 합계 불일치 자료는 진료비 혼입으로 판단하여 제외. 원본은 보존함.",
+        "premium_total_available": len(premiums),
+        "household_file": str(HOUSEHOLD_FILE),
+        "household_available": len(households),
+        "premium_definition": "연간 건강보험료 총액(천원) ÷ 주민등록세대수 ÷ 10 = 만원/세대/년. 직장+지역 전체(가입자 및 사용자 부담 포함 가능). 보험가입 세대별 실제 고지액이 아님.",
+        "premium_missing_households_warning": (None if households else
+            "주민등록세대수.csv가 없어 모든 가구당 보험료 회귀가 추정 불가입니다. 수치를 임의 추정하지 않습니다."),
         "municipal_total": len(detail),
         "province_total": len(province_rows),
         "municipal_by_variable": {field: sum(r.get(field) is not None for r in detail) for field in checks},
@@ -472,6 +494,11 @@ def build_expanded_analysis(stats: Path, out: Path, detail: list[dict],
                                   ("age65_percent", "under15_percent", "fertility", MEDICAL), True)
     for label, field in SIMPLE.items():
         audit[label] = _emit_models(out, f"{label}_ols_models", detail, province_rows, (field,), False)
+    audit["household_premium_multi"] = _emit_models(
+        out, "household_premium_multi_models", detail, province_rows,
+        ("age65_percent", "under15_percent", "fertility", MEDICAL, PREMIUM_FIELD), True)
+    audit["household_premium_ols"] = _emit_models(
+        out, "household_premium_ols_models", detail, province_rows, (PREMIUM_FIELD,), False)
     if len(disability_types) > 1:
         audit["disability_type_regressions"] = _emit_disability_type_models(
             out, detail, province_rows, disability_types)
