@@ -256,7 +256,7 @@ def _finite(value):
 
 def fit_extended_ols(rows: list[dict], predictors: tuple[str, ...],
                      scope: str, region: str, year: int | str, mode: str | None = None,
-                     dtype: str = "전체", full_summary: bool = True):
+                     dtype: str = "전체"):
     """Complete-case OLS with a constant, rank check, and explicit warnings."""
     valid = [r for r in rows if r.get("rates", {}).get(dtype) is not None
              and all(r.get(field) is not None and math.isfinite(float(r[field])) for field in predictors)]
@@ -283,8 +283,7 @@ def fit_extended_ols(rows: list[dict], predictors: tuple[str, ...],
         with warnings.catch_warnings():
             warnings.simplefilter("ignore")
             model = sm.OLS(y, design).fit()
-            raw = (str(model.summary(xname=["const"] + [field.replace("before","fiscal_before").replace("after","fiscal_after") for field in predictors]))
-                   if full_summary else None)
+            raw = str(model.summary(xname=["const"] + [field.replace("before","fiscal_before").replace("after","fiscal_after") for field in predictors]))
         ci = model.conf_int(alpha=.05)
         coefficients = {
             field: {
@@ -300,15 +299,6 @@ def fit_extended_ols(rows: list[dict], predictors: tuple[str, ...],
                       adj_r2=_finite(model.rsquared_adj),
                       p_model=float(model.f_pvalue) if math.isfinite(float(model.f_pvalue)) else None,
                       raw=raw)
-        if not full_summary:
-            # Compact statsmodels-derived summary avoids large per-type static files.
-            lines = [f"OLS / {dtype} 장애유형 등록률 (%)", f"분석: {scope} / {region} / {year}",
-                     f"n = {result['n']}", f"R² = {result['r2']}",
-                     f"Adj. R² = {result['adj_r2']}", f"F-test p = {result['p_model']}",
-                     f"절편 = {result['intercept']}"]
-            lines.extend(f"{key}: β={data['coef']}, p={data['p']}, 95% CI={data['ci']}"
-                         for key, data in coefficients.items())
-            result["raw"] = "\n".join(lines)
     except (ValueError, np.linalg.LinAlgError) as exc:
         result["warning"] = f"OLS 계산 실패: {exc}"
     return result
@@ -366,7 +356,7 @@ def _emit_disability_type_models(out: Path, detail: list[dict], provinces: list[
     """Precompute all 4 regressions per disability type in lazily fetched files.
 
     Models retain annual, nationwide/provincial, pooled, and locality histories;
-    only their full statsmodels text dumps are compacted to limit site size.
+    the full statsmodels OLS Regression Results are preserved for every fit.
     All source category missingness is preserved, never converted to zero.
     """
     yearly = {y: [r for r in detail if r["year"] == y] for y in YEARS}
@@ -399,7 +389,7 @@ def _emit_disability_type_models(out: Path, detail: list[dict], provinces: list[
                     names = ((fiscal,) + predictors) if fiscal else predictors
                     def fit(rows, scope, region, p=period):
                         return fit_extended_ols(rows, names, scope, region, p,
-                                                fiscal, dtype, full_summary=False)
+                                                fiscal, dtype)
                     models.append(fit(subset, "municipal", "전국"))
                     models.extend(fit(grouped[prov], "municipal", prov) for prov in PROVINCES)
                     models.append(fit(complete_prov, "provincial", "전국"))
@@ -408,7 +398,7 @@ def _emit_disability_type_models(out: Path, detail: list[dict], provinces: list[
                 for (prov, district), rows in sorted(history.items()):
                     models.append(fit_extended_ols(
                         rows, names, "local_history", prov + "|" + district,
-                        "전기간", fiscal, dtype, full_summary=False))
+                        "전기간", fiscal, dtype))
             filename = f"{prefix}_type_{index:02d}.json"
             _write_json(out / "data" / filename, {"type": dtype, "models": models})
             counts[prefix] = {
