@@ -239,6 +239,7 @@
     if (!item) {
       text('u-corr','—');
       text('u-corr-variable','');
+      for (const id of ['u-intercept','u-r2','u-adjr2','u-pmodel','u-n','u-caption']) text(id,'—');
       $('u-detail-corr').replaceChildren();
       showCoefficients(null,null);
       text('u-raw','해당 선택의 모형이 없습니다.');
@@ -377,7 +378,7 @@
   function trendDatasets(rows, metric) {
     const points=spec().years.map((year,i)=>{
       const item=rows[i];
-      const val = item && valid(item) ? metric(item) : null;
+      const val = item ? metric(item) : null;
       return {x:year,y:parse(val)};
     });
     return [{label:'연도별 OLS',data:points,borderColor:window.ResearchChartTheme.palette.series,
