@@ -25,3 +25,6 @@
   .navigation .nav-subitem{white-space:normal;padding:8px;min-width:0}
 }
 @media(max-width:420px){.navigation .nav-children{grid-template-columns:1fr}}
+
+/* Keep model-specific statistics completely absent from six-variable views. */
+#u-slope-card[hidden],#u-corr-card[hidden],#u-trend-corr-wrap[hidden],#u-scipy-section[hidden],[data-simple-correlation][hidden]{display:none!important}
