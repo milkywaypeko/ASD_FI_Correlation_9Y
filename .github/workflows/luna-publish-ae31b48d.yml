@@ -1,0 +1,86 @@
+name: Publish age and medical static analysis data
+on:
+  push:
+    branches: [feature/age-medical-regression-ae31b48d]
+    paths: ['.github/workflows/luna-publish-ae31b48d.yml']
+permissions:
+  contents: read
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - name: Install dependencies
+        run: python -m pip install -r requirements.txt pytest
+      - name: Test original and new code
+        run: PYTHONDONTWRITEBYTECODE=1 python -m pytest -p no:cacheprovider -q tests
+      - name: Build data without modifying source CSV
+        run: |
+          python build.py --input . --output "$RUNNER_TEMP/expanded-site" > "$RUNNER_TEMP/build.log" 2>&1 || { tail -n 90 "$RUNNER_TEMP/build.log"; exit 1; }
+          tail -n 12 "$RUNNER_TEMP/build.log"
+      - name: Check outputs and package only new data
+        shell: bash
+        run: |
+          python - <<'PY'
+          import json,os,pathlib,tarfile
+          folder=pathlib.Path(os.environ['RUNNER_TEMP'])/'expanded-site'/'data'
+          audit=json.loads((folder/'age_medical_quality.json').read_text())
+          print('COMPLETE CASES',audit['municipal_complete_cases'])
+          assert audit['municipal_complete_cases']['after']>=1000, 'Insufficient joined complete cases'
+          names=['municipalities.json','provinces.json','quality.json','age_medical_quality.json']
+          names+=sum(([p.name for p in folder.glob(prefix+'*.json')] for prefix in (
+            'demographic_multi_models_','age65_ols_models_','under15_ols_models_','medical_ols_models_')),[])
+          assert len(names)>=60, (len(names),names)
+          with tarfile.open('expanded-data.tar.gz','w:gz') as archive:
+            for name in sorted(set(names)):
+              archive.add(folder/name,arcname='site/data/'+name)
+          PY
+          sha256sum expanded-data.tar.gz > expanded-data.sha256
+      - uses: actions/upload-artifact@v4
+        with:
+          name: expanded-data-ae31b48d
+          path: |
+            expanded-data.tar.gz
+            expanded-data.sha256
+          retention-days: 1
+  publish:
+    needs: build
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+          ref: ${{ github.sha }}
+      - uses: actions/download-artifact@v4
+        with:
+          name: expanded-data-ae31b48d
+      - name: Verify artifact integrity and source identity
+        shell: bash
+        run: |
+          sha256sum -c expanded-data.sha256
+          test "$(git rev-parse HEAD)" = "${{ github.sha }}"
+          test "$(git ls-remote origin refs/heads/feature/age-medical-regression-ae31b48d | cut -f1)" = "${{ github.sha }}"
+          tar -tzf expanded-data.tar.gz | grep -v '^site/data/[^/]*\.json$' && exit 1 || true
+          tar -xzf expanded-data.tar.gz
+          test -s site/data/age_medical_quality.json
+      - name: Commit only verified generated JSON
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        shell: bash
+        run: |
+          git add site/data
+          if git diff --cached --quiet; then echo 'No changes'; exit 0; fi
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git commit -m 'build: publish age and medical regression model datasets'
+          git -c "http.extraheader=AUTHORIZATION: basic $(printf 'x-access-token:%s' "$GITHUB_TOKEN" | base64 -w0)" push origin HEAD:refs/heads/feature/age-medical-regression-ae31b48d
