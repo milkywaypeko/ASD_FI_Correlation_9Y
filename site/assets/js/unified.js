@@ -8,9 +8,17 @@
   const opt = (element, value, label) => element.add(new Option(label, value));
   const cache = new Map();
   const load = path => {
-    if (!cache.has(path)) cache.set(path, fetch(path).then(response => {
+    if (!cache.has(path)) cache.set(path, fetch(path).then(async response => {
       if (!response.ok) throw Error(path + ' HTTP ' + response.status);
-      return response.json();
+      if (!path.endsWith('.gz')) return response.json();
+      // GitHub Pages serves .gz as a binary asset, not Content-Encoding:gzip.
+      // Decompress on demand: this preserves exact statsmodels summaries and
+      // observations without shipping 1,258 uncompressed JSON documents.
+      if (!('DecompressionStream' in window)) {
+        throw Error('gzip 지원 브라우저가 필요합니다 (최신 Chrome/Edge/Firefox/Safari).');
+      }
+      const readable = response.body.pipeThrough(new DecompressionStream('gzip'));
+      return new Response(readable).json();
     }).catch(error => {cache.delete(path);throw error;}));
     return cache.get(path);
   };
@@ -368,7 +376,7 @@
     updateControls();
     text('u-warning','OLS 인덱스를 불러오는 중입니다.');
     try {
-      const items=await load('data/unified_index_'+state.model+'.json');
+      const items=await load('data/unified_index_'+state.model+'.json.gz');
       if(token!==run)return;
       index=items;
       drawIndex();
