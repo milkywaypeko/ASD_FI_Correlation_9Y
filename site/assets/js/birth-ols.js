@@ -77,7 +77,7 @@
     Lab.setChart('birth-scatter',{type:'scatter',data:{datasets:[
       {label:'관측치',data:scatter,pointRadius:st.allYears?3:4,pointHoverRadius:7,
        pointBackgroundColor:'rgba(33,140,136,.59)',pointBorderColor:'#fff',pointBorderWidth:.6},
-      {type:'line',label:'단순 OLS 회귀선',data:line,borderColor:'#e59a5c',backgroundColor:'#e59a5c',
+      {type:'line',label:'단순 OLS 회귀선',data:line,borderColor:window.ResearchChartTheme.palette.prediction,backgroundColor:window.ResearchChartTheme.palette.prediction,
        pointRadius:0,borderWidth:3,order:0}
     ]},options:{responsive:true,maintainAspectRatio:false,animation:false,
       plugins:{legend:{display:false},tooltip:{callbacks:{
@@ -88,8 +88,8 @@
           `${st.dtype} 장애 등록인원: ${Lab.integer(r.count)}명`,
           `주민등록인구: ${Lab.integer(r.population)}명`
         ]:`예측 등록률: ${num(context.parsed.y,6)}%`;}
-      }}},scales:{x:{type:'linear',title:{display:true,text:'합계출산율 (명/여성)',color:'#637386'},grid:{color:'#edf0f4'}},
-           y:{title:{display:true,text:'선택 장애유형 등록률 (%)',color:'#637386'},grid:{color:'#edf0f4'}}}}});
+      }}},scales:{x:{type:'linear',title:{display:true,text:'합계출산율 (명/여성)',color:window.ResearchChartTheme.palette.text},grid:{color:window.ResearchChartTheme.palette.grid}},
+           y:{title:{display:true,text:'선택 장애유형 등록률 (%)',color:window.ResearchChartTheme.palette.text},grid:{color:window.ResearchChartTheme.palette.grid}}}}});
     Lab.text('scatter-status',`${points.length.toLocaleString('ko-KR')}개 유효 관측치를 표시합니다. ${hasFit(current)?'Python statsmodels에서 계산한 OLS 계수로 회귀선을 그렸습니다.':'유효한 회귀선을 그릴 수 없습니다.'}`);
   }
   function updateTrends(){
