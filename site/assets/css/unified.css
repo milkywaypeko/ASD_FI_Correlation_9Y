@@ -1,0 +1,25 @@
+/* Shared responsive presentation for all seven regression tabs. */
+.u-table-wrap{overflow-x:auto;max-width:100%;margin:12px 0 16px}
+.u-table-wrap table{border-collapse:collapse;width:100%;min-width:720px;font-size:12px}
+.u-table-wrap th,.u-table-wrap td{padding:10px 12px;text-align:left;border-bottom:1px solid #e2e8ef;white-space:nowrap;vertical-align:top}
+.u-table-wrap th{background:#f4f7fb;color:#30445c;font-weight:650;position:sticky;top:0}
+.u-table-wrap tr:hover td{background:#f8fafc}
+.u-index-controls{display:flex;flex-wrap:wrap;gap:12px;align-items:end;margin:18px 0}
+.u-index-controls>label{display:flex;flex-direction:column;gap:6px;font-size:12px}
+.u-index-controls>label:has(input[type=checkbox]){flex-direction:row;align-items:center;padding-bottom:9px}
+.u-index-controls input,.u-index-controls select{padding:9px;border:1px solid #ccd7e0;border-radius:5px;min-width:180px}
+.u-index-controls input[type=checkbox]{min-width:unset}
+.u-sort{background:none;border:0;cursor:pointer;text-align:left;color:inherit;font:inherit;padding:0}
+.u-sort:disabled{cursor:default;opacity:1}
+.u-pager{display:flex;align-items:center;justify-content:end;gap:12px;margin-top:12px}
+.u-raw{white-space:pre;overflow:auto;max-height:610px;background:#152236;color:#e8f0f7;padding:18px;border-radius:8px;font-size:11px;line-height:1.5}
+.u-scatter-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:18px;margin-top:16px}
+.u-scatter{height:300px;min-width:0;border:1px solid #d8e1ec;border-radius:9px;padding:14px;display:flex;flex-direction:column}
+.u-scatter h3{font-size:13px;line-height:1.4;margin:0 0 10px}
+.u-scatter canvas{width:100%!important;min-height:0;flex:1}
+.u-trend-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:16px;margin:20px 0}
+.u-trend-grid>div{height:245px;min-width:0;border:1px solid #d8e1ec;border-radius:8px;padding:14px;display:flex;flex-direction:column}
+.u-trend-grid h3{font-size:13px;margin:0 0 8px}
+.u-trend-grid canvas{min-height:0;width:100%!important;flex:1}
+#u-trend-var{display:block;max-width:480px;margin-top:8px;padding:10px}
+@media(max-width:900px){.u-scatter-grid,.u-trend-grid{grid-template-columns:minmax(0,1fr)}.u-index-controls{align-items:stretch}.u-index-controls>label{flex:1 1 220px}}
