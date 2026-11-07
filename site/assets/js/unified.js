@@ -517,12 +517,14 @@
     }
     $('u-trend-export').onclick=()=>download(
       'yearly_regression_'+state.model+'_'+state.dtype+'.csv',
-      [['연도','장애유형','광역/기초','재정자립도 기준','설명변수','기울기 β','피어슨 r (Y–X)','SciPy r p값(양측)','절편 β₀','R²','수정 R²','기울기 p값','F검정 모형 p값','표본 n'],
+      [['연도','장애유형','광역/기초','재정자립도 기준','설명변수','기울기 β',
+        ...(isSimple()?['피어슨 r (Y–X)','SciPy r p값(양측)']:[]),
+        '절편 β₀','R²','수정 R²','기울기 p값','F검정 모형 p값','표본 n'],
        ...spec().years.map((year,j)=>{
          const m=rows[j];
          return [year,state.dtype,region(),state.fiscal,fields()[i],
-           valid(m)?m.coefficients[i]:null,m?.correlations?.[i]??null,
-           m?.correlation_pvalues?.[i]??null,
+           valid(m)?m.coefficients[i]:null,
+           ...(isSimple()?[m?.correlations?.[i]??null,m?.correlation_pvalues?.[i]??null]:[]),
            valid(m)?m.intercept:null,
            valid(m)?m.r2:null,valid(m)?m.adj_r2:null,
            valid(m)?m.pvalues[i]:null,valid(m)?m.p_model:null,m?.n??null];
@@ -597,11 +599,17 @@
       download('regression_index_'+state.model+'.csv',
         [['시점','장애유형','분석 단위','광역/기초','재정자립도 기준','표본 n',
           '절편 β₀','R²','수정 R²','모형 F p값',
-          ...Array.from({length:width},(_,i)=>['β'+(i+1),'SciPy 피어슨 r'+(i+1),'SciPy p'+(i+1)+'(양측)','β'+(i+1)+' p값']).flat(),'상세 파일'],
+          ...Array.from({length:width},(_,i)=>[
+            'β'+(i+1),
+            ...(isSimple()?['SciPy 피어슨 r'+(i+1),'SciPy p'+(i+1)+'(양측)']:[]),
+            'β'+(i+1)+' p값'
+          ]).flat(),'상세 파일'],
           ...filtered.map(item=>[item.year,item.type,item.scope,item.region,item.mode,
             item.n,item.intercept,item.r2,item.adj_r2,item.p_model,
             ...item.coefficients.flatMap((beta,i)=>[
-              beta,item.correlations?.[i]??null,item.correlation_pvalues?.[i]??null,item.pvalues[i]
+              beta,
+              ...(isSimple()?[item.correlations?.[i]??null,item.correlation_pvalues?.[i]??null]:[]),
+              item.pvalues[i]
             ]),item.shard])]);
     };
     render();
