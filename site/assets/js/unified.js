@@ -84,6 +84,14 @@
     text('u-year-label', period() === '전기간' ? years[0] + '–' + years.at(-1) + '년 통합' : state.year + '년');
     text('page-title', spec().label);
     $('u-model').value = state.model;
+    // Keep the shared sidebar highlight synchronized with the active model,
+    // including model changes made through the select control.
+    document.querySelectorAll('.navigation a[data-unified-model]').forEach(link => {
+      const isActive = link.dataset.unifiedModel === state.model;
+      link.classList.toggle('active', isActive);
+      if (isActive) link.setAttribute('aria-current', 'page');
+      else link.removeAttribute('aria-current');
+    });
     $('u-type').value = state.dtype;
     $('u-scope').value = state.scope;
     $('u-mode').value = state.fiscal;
