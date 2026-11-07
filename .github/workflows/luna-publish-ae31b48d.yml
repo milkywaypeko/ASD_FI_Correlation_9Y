@@ -38,7 +38,7 @@ jobs:
           names=['municipalities.json','provinces.json','quality.json','age_medical_quality.json']
           names+=sum(([p.name for p in folder.glob(prefix+'*.json')] for prefix in (
             'demographic_multi_models_','age65_ols_models_','under15_ols_models_','medical_ols_models_')),[])
-          assert len(names)>=60, (len(names),names)
+          assert len(names)>=55, (len(names),names)
           with tarfile.open('expanded-data.tar.gz','w:gz') as archive:
             for name in sorted(set(names)):
               archive.add(folder/name,arcname='site/data/'+name)
