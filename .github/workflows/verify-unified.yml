@@ -1,5 +1,11 @@
 name: Verify and stage unified regression site
 
+# Discard work on outdated branch commits; only the newest verified
+# generated JSON may be committed for GitHub Pages.
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
 on:
   push:
     branches:
@@ -58,10 +64,27 @@ jobs:
               assert len(fitted['correlations']) == (6 if key=='six' else 1)
               assert detail['correlations']['sample_n'] == fitted['n']
               assert detail['correlations']['method'] == 'pearson'
+              assert detail['correlations']['library'] == 'scipy.stats.pearsonr'
+              assert detail['correlations']['scipy_version']
+              assert detail['correlations']['alternative'] == 'two-sided'
+              assert len(fitted['correlation_pvalues']) == len(fitted['correlations'])
               fields=detail['model']['predictors']
               for i,field in enumerate(fields):
                   r=fitted['correlations'][i]
                   assert detail['correlations']['predictors'][field] == r
+                  scipy_result = detail['correlations']['scipy'][field]
+                  assert scipy_result['method'] == 'scipy.stats.pearsonr'
+                  assert scipy_result['n'] == fitted['n']
+                  assert scipy_result['statistic'] == r
+                  assert scipy_result['pvalue'] == fitted['correlation_pvalues'][i]
+                  assert scipy_result['alternative'] == 'two-sided'
+                  assert scipy_result['confidence_level'] == 0.95
+                  assert set(scipy_result['confidence_interval']) == {'low', 'high'}
+                  if r is not None:
+                      assert scipy_result['raw'].startswith('PearsonRResult(')
+                      assert scipy_result['raw_confidence_interval'].startswith('ConfidenceInterval(')
+                  else:
+                      assert scipy_result['reason']
                   assert r is None or -1.00000000001 <= r <= 1.00000000001
               assert 'OLS Regression Results' in detail['model']['raw']
           assert len(list((root/'unified_detail').rglob('*.json.gz'))) == 7 * 17
