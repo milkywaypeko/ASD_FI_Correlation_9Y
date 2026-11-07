@@ -10,11 +10,17 @@ def test_github_root_and_main_model_comparison_controls():
     root = (ROOT / "index.html").read_text(encoding="utf-8")
     html = (SITE / "index.html").read_text(encoding="utf-8")
     assert '<base href="./site/">' in root
+    # Preserve the older explorer at site/index.html while the Pages root
+    # opens the final six-variable unified dashboard.
     for field in ("compare-model-rows", "compare-all-types", "compare-all-regions",
                   "compare-export", "compare-detail-raw", "compare-detail-observations",
                   "compare-detail-export"):
         assert 'id="'+field+'"' in html
+    for field in ("u-model", "u-type", "u-scope", "u-year", "u-scatters",
+                  "u-index-table", "u-raw", "u-observation-export"):
         assert 'id="'+field+'"' in root
+    assert 'assets/js/unified.js' in root
+    assert 'assets/js/dashboard.js' not in root
 
 
 def test_multi_scatter_uses_actual_rate_without_residualisation():

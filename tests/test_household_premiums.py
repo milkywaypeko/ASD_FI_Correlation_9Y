@@ -91,9 +91,9 @@ class TestHouseholdPremiums(unittest.TestCase):
 
     def test_documented_units_and_page_explanations(self):
         readme=(BASE/'README.md').read_text(encoding='utf-8')
-        self.assertIn('## 변수의 단위·환산·회귀계수 해석 (필독)',readme)
+        self.assertIn('## 최종 6변수 회귀모형',readme)
         self.assertIn('만원/세대/년',readme)
-        self.assertIn('세대수 CSV',readme)
+        self.assertIn('주민등록세대수',readme)
         page=(BASE/'site'/'unified.html').read_text(encoding='utf-8')
         self.assertIn('만원/세대/년',page)
         self.assertIn('만원/인/년',page)
