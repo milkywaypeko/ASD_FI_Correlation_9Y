@@ -140,8 +140,8 @@
     return new Chart(canvas, {type:'scatter', data:{datasets:data}, options:{
       responsive:true,maintainAspectRatio:false,
       parsing:false,
-      scales:{x:{type:'linear',title:{display:true,text:xLabel}},
-              y:{title:{display:true,text:yLabel}}},
+      scales:{x:{type:'linear',...window.ResearchChartTheme.axis(xLabel)},
+              y:window.ResearchChartTheme.axis(yLabel)},
       plugins:{tooltip:{callbacks:{label:context => {
         const r = context.raw;
         return (r.place ? r.place + ' · ' : '') + fmt(r.x, 5) + ' / ' + fmt(r.y, 5);
@@ -178,10 +178,10 @@
       const low = Math.min(...xs), high = Math.max(...xs);
       const condition = predictors.length > 1;
       const datasets = [
-        {label:'실제 등록률(%)',data:points,backgroundColor:'rgba(32,104,158,.65)',pointRadius:3.1},
+        {label:'실제 등록률(%)',data:points,backgroundColor:window.ResearchChartTheme.palette.observationFill,pointRadius:window.ResearchChartTheme.scatter.pointRadius},
         {type:'line',label:condition?'나머지 다섯 변수 평균 고정 조건부 예측선':'단순 OLS 예측선',
          data:[{x:low,y:baseline + coefficient*low},{x:high,y:baseline + coefficient*high}],
-         borderColor:'#bd6738',borderWidth:2,pointRadius:0}
+         borderColor:window.ResearchChartTheme.palette.prediction,borderWidth:window.ResearchChartTheme.fit.borderWidth,pointRadius:0}
       ];
       const instance = graph(canvas,datasets,label(field),item.type+' 등록률(%)');
       if(instance) charts.push(instance);
@@ -354,8 +354,8 @@
       const val = item && valid(item) ? metric(item) : null;
       return {x:year,y:parse(val)};
     });
-    return [{label:'연도별 OLS',data:points,borderColor:'#226b97',
-      backgroundColor:'#226b97',spanGaps:false,tension:0.15,pointRadius:3}];
+    return [{label:'연도별 OLS',data:points,borderColor:window.ResearchChartTheme.palette.series,
+      backgroundColor:window.ResearchChartTheme.palette.series,spanGaps:false,tension:0.15,pointRadius:window.ResearchChartTheme.trend.pointRadius}];
   }
   function drawTrends() {
     clearCharts(trendCharts);
