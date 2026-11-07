@@ -70,7 +70,7 @@
   const isSimple = () => state.model !== 'six';
   function updateRegressionPresentation() {
     const simple = isSimple();
-    for (const id of ['u-slope-card','u-corr-card','u-trend-corr-wrap','u-scipy-section']) {
+    for (const id of ['u-slope-card','u-corr-card','u-slope-p-card','u-trend-corr-wrap','u-scipy-section']) {
       $(id).hidden = !simple;
     }
     document.querySelectorAll('[data-simple-correlation]').forEach(el => {el.hidden = !simple;});
