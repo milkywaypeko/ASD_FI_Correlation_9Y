@@ -115,7 +115,14 @@
         result.model.intercept !== item.intercept ||
         result.model.r2 !== item.r2 ||
         result.model.adj_r2 !== item.adj_r2 ||
-        result.model.p_model !== item.p_model) {
+        result.model.p_model !== item.p_model ||
+        result.correlations.sample_n !== item.n ||
+        result.correlations.predictors === undefined ||
+        modelFields(item).some((field, i) =>
+          (result.correlations.predictors[field] ?? null) !==
+            (item.correlations?.[i] ?? null) ||
+          (result.correlations.scipy?.[field]?.pvalue ?? null) !==
+            (item.correlation_pvalues?.[i] ?? null))) {
       throw Error('경량 인덱스와 원문 모형이 일치하지 않습니다.');
     }
     if (result.observations.length !== item.n) throw Error('원문과 관측치 표본 수 불일치');
@@ -125,10 +132,12 @@
   function showCoefficients(item, detail) {
     const body = $('u-coefficients'); body.replaceChildren();
     const model = detail?.model;
-    for (const field of modelFields(item)) {
+    for (const [i, field] of modelFields(item).entries()) {
       const c = model?.coefficients?.[field] || {};
       const tr = document.createElement('tr');
-      for (const value of [label(field), fmt(c.coef, 10), fmt(c.p, 9),
+      for (const value of [label(field), fmt(c.coef, 10),
+                            fmt(item?.correlations?.[i], 9), fmt(c.p, 9),
+                            fmt(item?.correlation_pvalues?.[i], 9),
                             fmt(c.ci?.[0], 9), fmt(c.ci?.[1], 9)]) {
         const td = document.createElement('td'); td.textContent = value; tr.appendChild(td);
       }
@@ -190,6 +199,52 @@
       (predictors.length > 1 ? '나머지 다섯 설명변수 평균 고정 조건부 예측선' : '단순회귀 적합선') +
       '을 구별해 표시합니다.' : 'Chart.js CDN을 불러오지 못했습니다. 계수와 관측치는 아래 표에서 확인할 수 있습니다.');
   }
+  function showSciPyRaw(detail, item, field) {
+    const predictors = modelFields(item);
+    const index = predictors.indexOf(field);
+    if (index < 0) throw Error('SciPy 설명변수 누락: ' + field);
+    const result = detail.correlations?.scipy?.[field];
+    if (!result) throw Error('SciPy 원시 결과가 없습니다: ' + field);
+    $('u-scipy-variable').value = field;
+    const lines = [
+      'scipy.stats.pearsonr(X, Y, alternative="two-sided")',
+      'SciPy version: ' + (detail.correlations.scipy_version ?? '—'),
+      '선택 모형: ' + item.type + ' / ' + item.region + ' / ' + item.year,
+      'X: ' + label(field),
+      'Y: 장애유형별 등록률 (%)',
+      '완전관측치 n: ' + detail.observations.length,
+      'SciPy 반환 객체: ' + (result.raw ?? '계산 불가'),
+      '95% 신뢰구간 반환 객체: ' + (result.raw_confidence_interval ?? '계산 불가'),
+      'statistic (r): ' + (result.statistic ?? 'null'),
+      'pvalue (two-sided): ' + (result.pvalue ?? 'null'),
+      'confidence_interval(0.95): [' + (result.confidence_interval.low ?? 'null') +
+        ', ' + (result.confidence_interval.high ?? 'null') + ']',
+      'alternative: ' + result.alternative,
+      '경고: ' + (result.warnings.length ? result.warnings.join(' / ') : '없음'),
+      '계산 실패 사유: ' + (result.reason ?? '없음')
+    ];
+    text('u-scipy-raw', lines.join('\n'));
+    const columnNames = ['year', 'province', 'district', field,
+                         'registered_rate_percent'];
+    const data = detail.observations.map(row =>
+      [row[0], row[1], row[2], row[4+index], row[3]]);
+    const tbody = $('u-scipy-observation-body'); tbody.replaceChildren();
+    for (const observed of data.slice(0, 150)) {
+      const tr = document.createElement('tr');
+      for (const value of observed) {
+        const td = document.createElement('td');
+        td.textContent = typeof value === 'number' ? fmt(value, 10) : String(value);
+        tr.append(td);
+      }
+      tbody.append(tr);
+    }
+    text('u-scipy-observation-count', data.length +
+      '개 실제 X·Y 쌍 · 화면에서 최대 150개 표시 · CSV에는 전체 표본 포함');
+    $('u-scipy-export').disabled = false;
+    $('u-scipy-export').onclick = () => download(
+      'scipy_pearson_pairs_'+state.model+'_'+item.id+'_'+field+'.csv',
+      [columnNames, ...data]);
+  }
   function observedDetail(detail, item) {
     const body = $('u-observation-body'),head = $('u-observation-head');
     body.replaceChildren();head.replaceChildren();
@@ -207,6 +262,37 @@
       '개 완전관측치 · 화면에서 150개 표시 · CSV에는 전체 관측치 포함');
     text('u-detail-title', item.type+' / '+item.region.replace('|',' ')+' / '+item.year+
       (item.mode ? ' / '+item.mode : '')+' / n='+item.n);
+    const correlationsBody = $('u-detail-corr');
+    correlationsBody.replaceChildren();
+    const predictorSelect = $('u-scipy-variable');
+    predictorSelect.replaceChildren();
+    modelFields(item).forEach((field, i) => {
+      opt(predictorSelect, field, label(field));
+      const scipy = detail.correlations?.scipy?.[field];
+      const row = document.createElement('tr');
+      for (const value of [
+        label(field), fmt(item.correlations?.[i], 10),
+        fmt(scipy?.pvalue, 10),
+        fmt(scipy?.confidence_interval?.low, 10),
+        fmt(scipy?.confidence_interval?.high, 10),
+        scipy?.n ?? item.n,
+        scipy?.reason || (scipy?.warnings?.length ? scipy.warnings.join(' / ') : '정상')
+      ]) {
+        const cell = document.createElement('td');
+        cell.textContent = value;
+        row.append(cell);
+      }
+      const cell = document.createElement('td');
+      const button = document.createElement('button');
+      button.className = 'outline-button';
+      button.textContent = 'SciPy Raw·관측치';
+      button.onclick = () => showSciPyRaw(detail, item, field);
+      cell.append(button);
+      row.append(cell);
+      correlationsBody.append(row);
+    });
+    predictorSelect.onchange = e => showSciPyRaw(detail, item, e.target.value);
+    showSciPyRaw(detail, item, modelFields(item)[Math.min(state.trendVar, modelFields(item).length-1)]);
     text('u-raw',detail.model.raw || detail.model.warning || '모형을 추정할 수 없습니다.');
     $('u-observation-export').disabled=false;
     $('u-observation-export').onclick=()=>download(
@@ -218,10 +304,20 @@
     const token=++run;
     selected=item;current=null;
     text('u-raw','상세 모형을 불러오는 중…');
+    text('u-scipy-raw','SciPy 결과를 불러오는 중…');
+    $('u-scipy-variable').replaceChildren();
+    $('u-scipy-observation-body').replaceChildren();
+    text('u-scipy-observation-count','');
+    $('u-scipy-export').disabled = true;
     $('u-observation-export').disabled=true;
     if (!item) {
+      text('u-corr','—');
+      text('u-corr-variable','');
+      for (const id of ['u-intercept','u-r2','u-adjr2','u-pmodel','u-n','u-caption']) text(id,'—');
+      $('u-detail-corr').replaceChildren();
       showCoefficients(null,null);
       text('u-raw','해당 선택의 모형이 없습니다.');
+      text('u-scipy-raw','해당 선택의 SciPy 분석이 없습니다.');
       scatter(null,null);
       return;
     }
@@ -234,6 +330,8 @@
       text('u-adjr2',fmt(item.adj_r2));
       text('u-pmodel',fmt(item.p_model,9));
       text('u-n',item.n);
+      text('u-corr',fmt(item.correlations?.[state.trendVar], 9));
+      text('u-corr-variable','· '+label(modelFields(item)[state.trendVar]));
       text('u-caption',item.type+' · '+item.region.replace('|',' ')+' · '+item.year);
       text('u-warning',item.warning || '해당 계수는 인과효과가 아니라 관측자료의 통계적 연관성입니다.');
       showCoefficients(item,detail);
@@ -244,6 +342,10 @@
       console.error(error);
       text('u-warning',error.message);
       text('u-raw','상세 모델 로딩 실패: '+error.message);
+      text('u-scipy-raw','SciPy 원시 결과 로딩 실패: '+error.message);
+      $('u-scipy-export').disabled = true;
+      text('u-corr','—');
+      $('u-detail-corr').replaceChildren();
     }
   }
   function scoped(item) {
@@ -300,6 +402,8 @@
     const maxVariables = spec().fiscal ? spec().fields.length+1 : spec().fields.length;
     for(let i=0;i<maxVariables;i++) {
       columns.push(col('beta'+i,'β'+(i+1),false));
+      columns.push(col('corr'+i,'r'+(i+1)+' (Y–X)',false));
+      columns.push(col('rp'+i,'r'+(i+1)+' SciPy p값',false));
       columns.push(col('p'+i,'β'+(i+1)+' p값',false));
     }
     columns.push(col('action','상세',false));
@@ -325,11 +429,13 @@
         if(column.key==='action') {
           const button=document.createElement('button');
           button.className='outline-button';button.textContent='Raw·관측치';
-          button.onclick=()=>{select(item);$('u-raw').scrollIntoView({behavior:'smooth',block:'center'});};
+          button.onclick=()=>{select(item);$('u-detail-title').scrollIntoView({behavior:'smooth',block:'start'});};
           td.append(button);
         } else {
           let value=item[column.key];
           if(column.key.startsWith('beta'))value=item.coefficients[Number(column.key.slice(4))];
+          if(column.key.startsWith('corr'))value=item.correlations?.[Number(column.key.slice(4))];
+          if(column.key.startsWith('rp'))value=item.correlation_pvalues?.[Number(column.key.slice(2))];
           if(/^p\d+$/.test(column.key))value=item.pvalues[Number(column.key.slice(1))];
           td.textContent=typeof value==='number'?fmt(value,8):String(value??'—');
         }
@@ -351,7 +457,7 @@
   function trendDatasets(rows, metric) {
     const points=spec().years.map((year,i)=>{
       const item=rows[i];
-      const val = item && valid(item) ? metric(item) : null;
+      const val = item ? metric(item) : null;
       return {x:year,y:parse(val)};
     });
     return [{label:'연도별 OLS',data:points,borderColor:window.ResearchChartTheme.palette.series,
@@ -366,7 +472,8 @@
       ['r2',m=>m.r2,'R²'],
       ['adjr2',m=>m.adj_r2,'수정 R²'],
       ['pcoef',m=>m.pvalues[i],'기울기 p값'],
-      ['pmodel',m=>m.p_model,'모형 F p값']
+      ['pmodel',m=>m.p_model,'모형 F p값'],
+      ['corr',m=>m.correlations?.[i],'피어슨 r (Y–X)']
     ];
     for(const [id,value,title] of configs) {
       if(!window.Chart) continue;
@@ -382,11 +489,13 @@
     }
     $('u-trend-export').onclick=()=>download(
       'yearly_regression_'+state.model+'_'+state.dtype+'.csv',
-      [['연도','장애유형','광역/기초','재정자립도 기준','설명변수','기울기 β','절편 β₀','R²','수정 R²','기울기 p값','F검정 모형 p값','표본 n'],
+      [['연도','장애유형','광역/기초','재정자립도 기준','설명변수','기울기 β','피어슨 r (Y–X)','SciPy r p값(양측)','절편 β₀','R²','수정 R²','기울기 p값','F검정 모형 p값','표본 n'],
        ...spec().years.map((year,j)=>{
          const m=rows[j];
          return [year,state.dtype,region(),state.fiscal,fields()[i],
-           valid(m)?m.coefficients[i]:null,valid(m)?m.intercept:null,
+           valid(m)?m.coefficients[i]:null,m?.correlations?.[i]??null,
+           m?.correlation_pvalues?.[i]??null,
+           valid(m)?m.intercept:null,
            valid(m)?m.r2:null,valid(m)?m.adj_r2:null,
            valid(m)?m.pvalues[i]:null,valid(m)?m.p_model:null,m?.n??null];
        })]
@@ -440,7 +549,14 @@
     $('u-mode').onchange=e=>{state.fiscal=e.target.value;render();};
     $('u-year').oninput=e=>{state.year=Number(e.target.value);render();};
     $('u-all-years').onchange=e=>{state.pooled=e.target.checked;render();};
-    $('u-trend-var').onchange=e=>{state.trendVar=Number(e.target.value);drawTrends();};
+    $('u-trend-var').onchange=e=>{
+      state.trendVar=Number(e.target.value);
+      drawTrends();
+      if (selected) {
+        text('u-corr',fmt(selected.correlations?.[state.trendVar],9));
+        text('u-corr-variable','· '+label(modelFields(selected)[state.trendVar]));
+      }
+    };
     $('u-search').oninput=e=>{state.search=e.target.value;state.page=0;drawIndex();};
     $('u-index-scope').onchange=e=>{state.indexScope=e.target.value;state.page=0;drawIndex();};
     $('u-all-types').onchange=e=>{state.allTypes=e.target.checked;state.page=0;drawIndex();};
@@ -452,10 +568,12 @@
       download('regression_index_'+state.model+'.csv',
         [['시점','장애유형','분석 단위','광역/기초','재정자립도 기준','표본 n',
           '절편 β₀','R²','수정 R²','모형 F p값',
-          ...Array.from({length:width},(_,i)=>['β'+(i+1),'β'+(i+1)+' p값']).flat(),'상세 파일'],
+          ...Array.from({length:width},(_,i)=>['β'+(i+1),'SciPy 피어슨 r'+(i+1),'SciPy p'+(i+1)+'(양측)','β'+(i+1)+' p값']).flat(),'상세 파일'],
           ...filtered.map(item=>[item.year,item.type,item.scope,item.region,item.mode,
             item.n,item.intercept,item.r2,item.adj_r2,item.p_model,
-            ...item.coefficients.flatMap((beta,i)=>[beta,item.pvalues[i]]),item.shard])]);
+            ...item.coefficients.flatMap((beta,i)=>[
+              beta,item.correlations?.[i]??null,item.correlation_pvalues?.[i]??null,item.pvalues[i]
+            ]),item.shard])]);
     };
     render();
   } catch(error) {

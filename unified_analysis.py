@@ -12,6 +12,10 @@ import gzip
 import json
 import math
 import shutil
+import warnings
+
+import scipy
+from scipy.stats import pearsonr
 
 from expanded_analysis import PROVINCES, fit_extended_ols
 
@@ -69,6 +73,72 @@ def _complete_cases(rows, dtype, fields):
     ]
 
 
+
+def _number_or_none(value):
+    """Convert numeric SciPy values to JSON-safe numbers, never impute zero."""
+    try:
+        converted = float(value)
+        return converted if math.isfinite(converted) else None
+    except (TypeError, ValueError):
+        return None
+
+
+def _scipy_pearson_result(xs, ys):
+    """Actual two-sided scipy.stats.pearsonr and its raw return object.
+
+    Inputs are the *identical* model complete-case sample used by OLS.
+    A undefined r, p or interval stays null; observed pairs are retained
+    separately in detail["observations"] and are never modified.
+    """
+    n = len(xs)
+    result = {
+        "method": "scipy.stats.pearsonr",
+        "n": n,
+        "alternative": "two-sided",
+        "statistic": None,
+        "pvalue": None,
+        "confidence_level": 0.95,
+        "confidence_interval": {"low": None, "high": None},
+        "raw": None,
+        "raw_confidence_interval": None,
+        "warnings": [],
+        "reason": None,
+    }
+    if n != len(ys):
+        raise AssertionError("SciPy X/Y paired sample lengths differ")
+    if n < 2:
+        result["reason"] = "표본 n<2: 피어슨 상관계수 계산 불가"
+        return result
+    if all(x == xs[0] for x in xs) or all(y == ys[0] for y in ys):
+        result["reason"] = "X 또는 Y가 상수: 피어슨 상관계수 정의되지 않음"
+        return result
+    with warnings.catch_warnings(record=True) as caught:
+        warnings.simplefilter("always")
+        raw = pearsonr(xs, ys, alternative="two-sided")
+        interval = raw.confidence_interval(confidence_level=0.95)
+    result["raw"] = repr(raw)
+    result["raw_confidence_interval"] = repr(interval)
+    result["statistic"] = _number_or_none(raw.statistic)
+    result["pvalue"] = _number_or_none(raw.pvalue)
+    result["confidence_interval"] = {
+        "low": _number_or_none(interval.low),
+        "high": _number_or_none(interval.high),
+    }
+    result["warnings"] = [str(item.message) for item in caught]
+    if result["statistic"] is None:
+        result["reason"] = "SciPy가 정의되지 않은 r을 반환함"
+    elif result["pvalue"] is None:
+        result["reason"] = "SciPy가 유효하지 않은 p값을 반환함"
+    if result["confidence_interval"]["low"] is None:
+        result["warnings"].append("표본이 작아 95% 신뢰구간을 계산할 수 없음")
+    return result
+
+
+def _pearson_correlation(xs, ys):
+    """Compatibility wrapper; the statistic now comes only from SciPy."""
+    return _scipy_pearson_result(xs, ys)["statistic"]
+
+
 def _fit(rows, dtype, fields, scope, region, period, fiscal_mode):
     # Provincial disability totals are valid only if every component locality
     # reported that type. Unreported categories must never become zero.
@@ -80,6 +150,16 @@ def _fit(rows, dtype, fields, scope, region, period, fiscal_mode):
     )
     if model["n"] != len(complete):
         raise AssertionError("OLS complete-case count does not match audit rows")
+    # Marginal X-Y Pearson r for each predictor, evaluated on exactly the
+    # same complete cases as the corresponding six-variable or simple OLS.
+    # These are NOT partial correlations and are not inferred from R².
+    y_values = [float(row["rates"][dtype]) for row in complete]
+    scipy_results = [
+        _scipy_pearson_result(
+            [float(row[field]) for row in complete], y_values
+        ) for field in fields
+    ]
+    correlations = [entry["statistic"] for entry in scipy_results]
     observations = []
     for row in complete:
         actual = float(row["rates"][dtype])
@@ -100,10 +180,21 @@ def _fit(rows, dtype, fields, scope, region, period, fiscal_mode):
         "adj_r2": model["adj_r2"], "p_model": model["p_model"],
         "coefficients": [model["coefficients"].get(f, {}).get("coef") for f in fields],
         "pvalues": [model["coefficients"].get(f, {}).get("p") for f in fields],
+        "correlations": correlations,
+        "correlation_pvalues": [entry["pvalue"] for entry in scipy_results],
         "warning": model["warning"],
     }
     detail = {
         "model": model,
+        "correlations": {
+            "method": "pearson",
+            "library": "scipy.stats.pearsonr",
+            "scipy_version": scipy.__version__,
+            "alternative": "two-sided",
+            "sample_n": len(complete),
+            "predictors": dict(zip(fields, correlations)),
+            "scipy": dict(zip(fields, scipy_results)),
+        },
         "columns": ["year", "province", "district", "registered_rate_percent",
                     *fields, "prediction_percent", "residual_percentage_points"],
         "observations": observations,
@@ -111,6 +202,7 @@ def _fit(rows, dtype, fields, scope, region, period, fiscal_mode):
             "outcome": "해당 장애유형 등록인원 ÷ 해당 연도·지역 주민등록인구 × 100 (%)",
             "prediction": "동일 statsmodels OLS 모형으로 계산한 관측치별 적합값",
             "inference": "통계적 연관성만 분석하며 인과관계를 입증하지 않습니다.",
+            "correlation": "피어슨 r, 양측 p값, 95% Fisher 신뢰구간은 scipy.stats.pearsonr에서 반환됩니다. 모형에 사용된 동일 완전관측치의 Y와 각 X 간 비가중 이변량 상관이며 편상관이나 다중회귀 β가 아닙니다. n<2 또는 상수 변수인 경우 null; 표본 n<=3이면 신뢰구간이 정의되지 않을 수 있습니다.",
         },
     }
     return record, detail
@@ -194,6 +286,9 @@ def build_unified_analysis(out: Path, detail: list[dict],
             for key, cfg in SPECS.items()
         },
         "limitations": [
+            "피어슨 r, 양측검정 p값, 95% 신뢰구간은 scipy.stats.pearsonr로 동일 완전관측치에서 계산하며, 다중회귀 β 또는 편상관이 아닙니다.",
+            "r의 절댓값이 1에 가까우면 선형 연관성이 크지만 인과관계를 입증하지 않습니다.",
+            "상수열이나 표본 부족으로 계산되지 않는 r은 결측으로 기록하며 0으로 대체하지 않습니다.",
             "지역별 회귀계수는 통계적 연관성이며 인과효과가 아닙니다.",
             "단순회귀는 다른 변수를 통제하지 않으며, 다중회귀 계수는 다른 다섯 변수를 일정하게 둔 조건부 연관성입니다.",
             "연도 통합 OLS는 지자체 반복관측과 연도효과를 따로 통제하지 않습니다.",

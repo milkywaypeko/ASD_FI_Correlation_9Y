@@ -1,9 +1,15 @@
 name: Verify and stage unified regression site
 
+# Discard work on outdated branch commits; only the newest verified
+# generated JSON may be committed for GitHub Pages.
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
 on:
   push:
     branches:
-      - fix/pages-compressed-regression-assets-20261108
+      - feat/pearson-correlations-20261108
   pull_request:
     branches:
       - main
@@ -55,6 +61,31 @@ jobs:
               assert detail['model']['r2']==fitted['r2']
               assert detail['model']['adj_r2']==fitted['adj_r2']
               assert detail['model']['p_model']==fitted['p_model']
+              assert len(fitted['correlations']) == (6 if key=='six' else 1)
+              assert detail['correlations']['sample_n'] == fitted['n']
+              assert detail['correlations']['method'] == 'pearson'
+              assert detail['correlations']['library'] == 'scipy.stats.pearsonr'
+              assert detail['correlations']['scipy_version']
+              assert detail['correlations']['alternative'] == 'two-sided'
+              assert len(fitted['correlation_pvalues']) == len(fitted['correlations'])
+              fields=detail['model']['predictors']
+              for i,field in enumerate(fields):
+                  r=fitted['correlations'][i]
+                  assert detail['correlations']['predictors'][field] == r
+                  scipy_result = detail['correlations']['scipy'][field]
+                  assert scipy_result['method'] == 'scipy.stats.pearsonr'
+                  assert scipy_result['n'] == fitted['n']
+                  assert scipy_result['statistic'] == r
+                  assert scipy_result['pvalue'] == fitted['correlation_pvalues'][i]
+                  assert scipy_result['alternative'] == 'two-sided'
+                  assert scipy_result['confidence_level'] == 0.95
+                  assert set(scipy_result['confidence_interval']) == {'low', 'high'}
+                  if r is not None:
+                      assert scipy_result['raw'].startswith('PearsonRResult(')
+                      assert scipy_result['raw_confidence_interval'].startswith('ConfidenceInterval(')
+                  else:
+                      assert scipy_result['reason']
+                  assert r is None or -1.00000000001 <= r <= 1.00000000001
               assert 'OLS Regression Results' in detail['model']['raw']
           assert len(list((root/'unified_detail').rglob('*.json.gz'))) == 7 * 17
           assert not list((root/'unified_detail').rglob('*.json'))
@@ -63,24 +94,28 @@ jobs:
           site_files=[p for p in site.rglob('*') if p.is_file()]
           total_bytes=sum(p.stat().st_size for p in site_files)
           assert len(site_files)<500, f'Pages has too many files: {len(site_files)}'
-          assert total_bytes<240_000_000, f'Pages has too many bytes: {total_bytes}'
+          # SciPy raw PearsonRResult + per-model 95% CI add about 13 MB to
+          # the previous 236 MB site; keep a finite safety ceiling for Pages.
+          assert total_bytes<280_000_000, f'Pages has too many bytes: {total_bytes}'
           print(f'PAGES PAYLOAD: {len(site_files)} files, {total_bytes:,} bytes')
           assert not list(root.glob('demographic_multi_models_*.json'))
           assert not list(root.glob('household_premium_multi_models_*.json'))
           print('UNIFIED MODEL, YEAR, SAMPLE, FULL OLS, AND OBSERVATION CHECKS: PASS')
           PY
       - name: JavaScript syntax check
-        run: node --check site/assets/js/unified.js
+        run: |
+          node --check site/assets/js/unified.js
+          node --check site/assets/js/chart-theme.js
       - name: Run all tests after regeneration
         run: python -m pytest tests -q
       - name: Archive only generated changes for a publishing job
-        if: github.event_name == 'push' && github.ref == 'refs/heads/fix/pages-compressed-regression-assets-20261108'
+        if: github.event_name == 'push' && github.ref == 'refs/heads/feat/pearson-correlations-20261108'
         run: |
           mkdir -p /tmp/unified-output
           cp -a site/data /tmp/unified-output/data
           cp -a index.html /tmp/unified-output/root-index.html
       - name: Upload verified generated output
-        if: github.event_name == 'push' && github.ref == 'refs/heads/fix/pages-compressed-regression-assets-20261108'
+        if: github.event_name == 'push' && github.ref == 'refs/heads/feat/pearson-correlations-20261108'
         uses: actions/upload-artifact@v4
         with:
           name: verified-unified-regression-site
@@ -90,7 +125,7 @@ jobs:
 
   stage-generated-data:
     needs: verify
-    if: github.event_name == 'push' && github.ref == 'refs/heads/fix/pages-compressed-regression-assets-20261108'
+    if: github.event_name == 'push' && github.ref == 'refs/heads/feat/pearson-correlations-20261108'
     runs-on: ubuntu-latest
     timeout-minutes: 20
     permissions:
@@ -115,5 +150,5 @@ jobs:
           git add -A site/data index.html
           if ! git diff --cached --quiet; then
             git commit -m "build: commit verified unified statsmodels JSON and Pages entry"
-            git push origin HEAD:fix/pages-compressed-regression-assets-20261108
+            git push origin HEAD:feat/pearson-correlations-20261108
           fi
