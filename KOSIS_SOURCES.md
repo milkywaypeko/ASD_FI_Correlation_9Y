@@ -25,7 +25,14 @@ KOSIS는 출처를 명시할 때 **작성기관·조사명·통계표명·작성
 | `출산율/Birth rate.csv` | **국가데이터처(과거 통계청), 「인구동향조사」, 합계출산율(시군구 자료), KOSIS, 2014–2022년 자료 사용, 2026.11.08 열람.** | [KOSIS 합계출산율](https://kosis.kr/visual/nsportalStats/detailContents.do?listId=A&statJipyoId=3643&vStatJipyoId=4854) 및 [KOSIS 시군구 출생아수·합계출산율 연결 안내](https://kosis.kr/edu/visualStats/detail.do?ixId=1123&menuId=M_05). **이 CSV의 세부 표 ID는 미확인** |
 | `장애인등록/Disability/` 시도별 원본 17개 | **보건복지부, 「장애인현황」, 장애유형별 등록장애인수(시도·시군구 관련 원본), KOSIS, 2014–2022년 자료 사용, 2026.11.08 열람.** | [KOSIS 장애인인구 지표](https://kosis.kr/visual/nsportalStats/detailContents.do?listId=D&statJipyoId=3672&vStatJipyoId=4839) — 작성기관·시도별 표명 확인. **CSV 17개의 개별 시군구 통계표 ID는 미확인** |
 | `국가건강정보/진료비/` 원본 4개 | **국민건강보험공단, 지역별·연령별 진료현황, KOSIS에서 추출한 연도별 지역 자료, 연구에 2015–2022년 사용, 2026.11.08 출처 목록 열람.** | [KOSIS 공식 통계목록](https://kosis.kr/statisticsList/statisticsListIndex.do?menuId=M_01&outLink=Y). **정확한 작성 통계명·표 ID는 아직 독립 확인 불가**; 원본 CSV 파일명과 작성기관은 본 연구의 기록 기준 |
-| `국가건강정보/보험료/` 원본 4개 | **국민건강보험공단, 시군구별 건강보험료 현황, KOSIS에서 추출한 연도별 지역 자료, 연구에 2015–2022년 사용, 2026.11.08 출처 목록 열람.** | [KOSIS 공식 통계목록](https://kosis.kr/statisticsList/statisticsListIndex.do?menuId=M_01&outLink=Y). **정확한 작성 통계명·표 ID는 아직 독립 확인 불가**; 파일명과 작성기관은 본 연구의 기록 기준 |
+| `국가건강정보/보험료/` 원본 4개 | **국민건강보험공단, 「지역별 의료이용통계」, 「시군구별 보험료 현황」, KOSIS, 연구에 2015–2022년 사용, 2026.11.08 열람.** | 공식 KOSIS 통계표 중 **3개 지역군 표 ID 직접 확인**: 서울·인천·경기·강원 `TX_35003_A021`, 대전·세종·충북·충남 `TX_35003_A050`, 광주·전북·전남·제주 `TX_35003_A079`. 부산·대구·울산·경북·경남의 표 ID는 미확인. 아래 공식 목록 링크 참조. |
+
+### 국민건강보험공단 「시군구별 보험료 현황」 공식 통계표
+
+- [KOSIS 지역편(서울·인천·경기·강원) 일반현황](https://stat.kosis.kr/nsieu/view/tree.do?hOrg=350&id=350_35003_2_1%2AMT_OTITLE&task=branchView): **TX_35003_A021**.
+- [KOSIS 지역편(대전·세종·충북·충남) 일반현황](https://stat.kosis.kr/nsieu/view/tree.do?hOrg=350&id=350_35003_3_1%2AMT_OTITLE&task=branchView): **TX_35003_A050**.
+- [KOSIS 지역편(광주·전북·전남·제주) 일반현황](https://stat.kosis.kr/nsieu/view/tree.do?hOrg=350&id=350_35003_4_1%2AMT_OTITLE&task=branchView): **TX_35003_A079**.
+- [KOSIS의 보험료 기준·원본 이상값 공식 답변](https://kosis.kr/civilComplaint/qnaDetail.do?boardIdx=23305): 시군구별 보험료 현황은 직장 고지보험료(정산포함)와 지역 부과보험료의 **연간 합계**입니다. KOSIS는 문의된 특정 오류값을 인정하고 수정 예정이라고 답변했습니다. 연구의 2014년 보험료 분석 제외와 원본 보존 기록에 대한 참고자료이며, 현재 표에 반영된 정정 여부를 단정하지 않습니다.
 
 **중요한 구분:** KOSIS 100대지표 화면은 공식 지표의 출처·작성기관·통계표명을
 확인하는 **검증 가능한 안내 링크**입니다. 연구자가 내려받은 시군구 단위 CSV의
