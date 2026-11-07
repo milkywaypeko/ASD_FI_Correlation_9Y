@@ -43,11 +43,16 @@ class TestFertilityAutismOLS(unittest.TestCase):
         with tempfile.TemporaryDirectory() as tmp:
             root=Path(tmp)
             (root/'site').mkdir()
-            (root/'site'/'index.html').write_text('<!doctype html><html><head><title>sample</title></head><body><a href="birth-ols.html">OLS</a></body></html>',encoding='utf-8')
+            old_explorer='<!doctype html><html><head><title>legacy</title></head><body>OLD EXPLORER</body></html>'
+            unified='<!doctype html><html><head><title>6-variable</title></head><body><a href="unified.html?model=six">SIX</a></body></html>'
+            (root/'site'/'index.html').write_text(old_explorer,encoding='utf-8')
+            (root/'site'/'unified.html').write_text(unified,encoding='utf-8')
             write_project_root_entrypoint(root,root/'site')
             result=(root/'index.html').read_text(encoding='utf-8')
             self.assertIn('<base href="./site/">',result)
-            self.assertIn('href="birth-ols.html"',result)
+            self.assertIn('href="unified.html?model=six"',result)
+            self.assertNotIn('OLD EXPLORER',result)
+            self.assertEqual((root/'site'/'index.html').read_text(encoding='utf-8'),old_explorer)
             self.assertTrue((root/'.nojekyll').exists())
 
 
