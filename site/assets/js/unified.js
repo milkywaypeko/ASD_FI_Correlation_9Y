@@ -9,7 +9,7 @@
   const fmtP = (x, digits = 9) => {
     const p = parse(x);
     if (p === null) return '—';
-    if (p === 0) return '0 (계산 정밀도 한계 가능)';
+    if (p === 0) return '0 (정밀도 한계 가능)';
     if (Math.abs(p) < 10 ** (-digits)) return p.toExponential(3);
     return fmt(p, digits);
   };
@@ -383,6 +383,7 @@
       text('u-corr','—');
       text('u-slope','—');
       text('u-slope-p','—');
+      text('u-pmodel','—');
       $('u-detail-corr').replaceChildren();
     }
   }
