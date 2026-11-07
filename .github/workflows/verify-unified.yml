@@ -3,7 +3,7 @@ name: Verify and stage unified regression site
 on:
   push:
     branches:
-      - fix/pages-compressed-regression-assets-20261108
+      - feat/pearson-correlations-20261108
   pull_request:
     branches:
       - main
@@ -55,6 +55,14 @@ jobs:
               assert detail['model']['r2']==fitted['r2']
               assert detail['model']['adj_r2']==fitted['adj_r2']
               assert detail['model']['p_model']==fitted['p_model']
+              assert len(fitted['correlations']) == (6 if key=='six' else 1)
+              assert detail['correlations']['sample_n'] == fitted['n']
+              assert detail['correlations']['method'] == 'pearson'
+              fields=detail['model']['predictors']
+              for i,field in enumerate(fields):
+                  r=fitted['correlations'][i]
+                  assert detail['correlations']['predictors'][field] == r
+                  assert r is None or -1.00000000001 <= r <= 1.00000000001
               assert 'OLS Regression Results' in detail['model']['raw']
           assert len(list((root/'unified_detail').rglob('*.json.gz'))) == 7 * 17
           assert not list((root/'unified_detail').rglob('*.json'))
@@ -70,17 +78,19 @@ jobs:
           print('UNIFIED MODEL, YEAR, SAMPLE, FULL OLS, AND OBSERVATION CHECKS: PASS')
           PY
       - name: JavaScript syntax check
-        run: node --check site/assets/js/unified.js
+        run: |
+          node --check site/assets/js/unified.js
+          node --check site/assets/js/chart-theme.js
       - name: Run all tests after regeneration
         run: python -m pytest tests -q
       - name: Archive only generated changes for a publishing job
-        if: github.event_name == 'push' && github.ref == 'refs/heads/fix/pages-compressed-regression-assets-20261108'
+        if: github.event_name == 'push' && github.ref == 'refs/heads/feat/pearson-correlations-20261108'
         run: |
           mkdir -p /tmp/unified-output
           cp -a site/data /tmp/unified-output/data
           cp -a index.html /tmp/unified-output/root-index.html
       - name: Upload verified generated output
-        if: github.event_name == 'push' && github.ref == 'refs/heads/fix/pages-compressed-regression-assets-20261108'
+        if: github.event_name == 'push' && github.ref == 'refs/heads/feat/pearson-correlations-20261108'
         uses: actions/upload-artifact@v4
         with:
           name: verified-unified-regression-site
@@ -90,7 +100,7 @@ jobs:
 
   stage-generated-data:
     needs: verify
-    if: github.event_name == 'push' && github.ref == 'refs/heads/fix/pages-compressed-regression-assets-20261108'
+    if: github.event_name == 'push' && github.ref == 'refs/heads/feat/pearson-correlations-20261108'
     runs-on: ubuntu-latest
     timeout-minutes: 20
     permissions:
@@ -115,5 +125,5 @@ jobs:
           git add -A site/data index.html
           if ! git diff --cached --quiet; then
             git commit -m "build: commit verified unified statsmodels JSON and Pages entry"
-            git push origin HEAD:fix/pages-compressed-regression-assets-20261108
+            git push origin HEAD:feat/pearson-correlations-20261108
           fi
