@@ -112,7 +112,7 @@
 
     // Fiscal independence × disability: same model-comparison workflow as
     // the multivariate page, using the already-precomputed statsmodels OLS.
-    const compareState={allTypes:false,allRegions:false,search:'',page:0};
+    const compareState={allTypes:false,allRegions:false,nationalOnly:false,search:'',page:0};
     let compareTicket=0,compareRows=[],compareDisplayed=[],compareSelected=null,compareObs=[];
     const esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
     const comparisonKey=m=>`${m.scope}|${m.region}|${m.year}|${m.type}|${m.mode}`;
@@ -174,23 +174,35 @@
     }
     async function renderCompare(){
       const ticket=++compareTicket;
-      const source=st.unit==='local_history'
+      // The nationwide-only table is independent of the chart's geographic scope.
+      // It reuses the already-fitted OLS for all municipalities, not an average of local coefficients.
+      const compareUnit=compareState.nationalOnly?'municipal':st.unit;
+      const source=compareUnit==='local_history'
         ?await Lab.load('data/models_local_history.json')
         :st.allYears
           ?[...(await Promise.all(meta.years.map(y=>Lab.models(y,st.mode)))).flat(),...(await Lab.load('data/models_pooled.json'))]
           :await Lab.models(st.year,st.mode);
       if(ticket!==compareTicket)return;
-      const region=st.unit==='local_history'?`${st.province}|${st.district}`:st.unit==='provincial'?'전국':st.province;
-      compareRows=source.filter(m=>m.mode===st.mode && m.scope===st.unit &&
+      const region=compareState.nationalOnly?'전국':compareUnit==='local_history'?`${st.province}|${st.district}`:compareUnit==='provincial'?'전국':st.province;
+      compareRows=source.filter(m=>m.mode===st.mode && m.scope===compareUnit &&
         (compareState.allTypes||m.type===st.dtype) &&
-        (compareState.allRegions || m.region===region));
-      Lab.text('compare-table-summary',`${st.unit==='local_history'?'기초 시계열':st.allYears?'연도별 + 전체 통합':st.year+'년'} · ${st.mode==='before'?'개편 전':'개편 후'}`);
-      E('compare-all-regions').disabled=st.unit==='provincial';
+        (compareState.nationalOnly ? m.region==='전국' : compareState.allRegions || m.region===region));
+      Lab.text('compare-table-summary',`${compareState.nationalOnly?'전국 전체 기초지자체 · ':''}${compareUnit==='local_history'?'기초 시계열':st.allYears?'연도별 + 전체 통합':st.year+'년'} · ${st.mode==='before'?'개편 전':'개편 후'}`);
+      E('compare-all-regions').disabled=compareState.nationalOnly||compareUnit==='provincial';
       buildComparedTable();
     }
     for(const [id,field] of [['compare-all-types','allTypes'],['compare-all-regions','allRegions']]){
       E(id).addEventListener('change',()=>{compareState[field]=E(id).checked;compareState.page=0;renderCompare().catch(Lab.showError);});
     }
+    E('compare-national-only').addEventListener('change',()=>{
+      compareState.nationalOnly=E('compare-national-only').checked;
+      compareState.page=0;
+      if(compareState.nationalOnly){
+        compareState.allRegions=false;
+        E('compare-all-regions').checked=false;
+      }
+      renderCompare().catch(Lab.showError);
+    });
     E('compare-search').addEventListener('input',()=>{compareState.search=E('compare-search').value.toLowerCase().trim();compareState.page=0;buildComparedTable();});
     E('compare-prev').addEventListener('click',()=>{compareState.page=Math.max(0,compareState.page-1);buildComparedTable();});
     E('compare-next').addEventListener('click',()=>{compareState.page++;buildComparedTable();});
