@@ -1,0 +1,85 @@
+<!doctype html>
+<html lang="ko"><head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>장애인 등록률 통합 회귀 연구 | 2014–2022</title>
+<link rel="stylesheet" href="assets/css/style.css">
+<link rel="stylesheet" href="assets/css/unified.css">
+<script defer src="https://cdn.jsdelivr.net/npm/chart.js@4.4.8/dist/chart.umd.min.js"></script>
+<script defer src="assets/js/unified.js"></script>
+</head><body>
+<div class="app-shell"><aside class="sidebar">
+<div class="brand-mark">✳</div><div class="brand-text">PUBLIC DATA LAB<span>2014 — 2022</span></div>
+<nav class="navigation" aria-label="회귀분석 탭">
+<a href="index.html">▦ 데이터 탐색</a>
+<a href="unified.html?model=six">∑ 최종 6변수 다중회귀</a>
+<a href="unified.html?model=age65">◷ 65세 이상 비율</a>
+<a href="unified.html?model=under15">◴ 0~14세 비율</a>
+<a href="unified.html?model=medical">▤ 1인당 진료비</a>
+<a href="unified.html?model=premium">◉ 가구당 건강보험료</a>
+<a href="unified.html?model=fertility">↗ 합계출산율</a>
+<a href="unified.html?model=fiscal">◇ 재정자립도</a>
+<a href="quality.html">ⓘ 데이터 품질·방법</a>
+</nav><div class="sidebar-bottom"><div class="sidebar-eyebrow">자료 가용성</div><p>전체 2014–2022<br>건강보험 포함 모형 2015–2022</p><p>Python statsmodels OLS · 사전 계산된 정적 JSON</p></div></aside>
+<main class="main-area">
+<header class="page-header"><div><div class="eyebrow">REGISTERED DISABILITY / COMPLETE REGRESSION EXPLORER</div>
+<h1 id="page-title">등록률 회귀분석</h1><p class="lead">지역별 장애유형 등록률과 사회·인구·건강보험 지표의 통계적 연관성을 탐색합니다. 인과관계를 입증하지 않습니다.</p></div><div class="year-range"><span id="page-period">2015 — 2022</span><div>STATSMODELS OLS</div></div></header>
+<section class="filter-panel"><div class="filter-header"><h2>01 / 분석 조건</h2><span class="subtle">분석값은 Python에서 사전 계산됩니다.</span></div>
+<div class="filter-grid">
+<label>회귀모형<select id="u-model"></select></label>
+<label>장애유형<select id="u-type"></select></label>
+<label>분석 단위<select id="u-scope"><option value="municipal">기초지자체 간 비교</option><option value="provincial">광역지자체 간 비교</option><option value="local_history">기초지자체 연도별 변화</option></select></label>
+<label>광역지자체<select id="u-province"></select></label>
+<label>기초지자체<select id="u-district"></select></label>
+<label id="u-mode-wrap">재정자립도 기준<select id="u-mode"><option value="after">개편 후</option><option value="before">개편 전</option></select></label>
+</div><div class="time-row"><label class="switchlabel"><input type="checkbox" id="u-all-years"> 전체 기간 통합</label>
+<div class="year-control"><span id="u-year-label"></span><input type="range" id="u-year" min="2015" max="2022" step="1" value="2022">
+<div class="year-ticks"><span id="year-start">2015</span><span>2018</span><span>2020</span><span>2022</span></div></div></div></section>
+<div class="section-top"><div><div class="eyebrow">02 / MODEL SUMMARY</div><h2>OLS 회귀 결과</h2></div><span class="pill" id="u-caption">불러오는 중…</span></div>
+<section class="kpi-grid" aria-label="회귀 통계 카드">
+<div class="kpi"><div class="kpi-label">절편 β₀</div><div class="kpi-value" id="u-intercept">—</div></div>
+<div class="kpi"><div class="kpi-label">R² 결정계수</div><div class="kpi-value" id="u-r2">—</div></div>
+<div class="kpi"><div class="kpi-label">Adjusted R² 수정 결정계수</div><div class="kpi-value" id="u-adjr2">—</div></div>
+<div class="kpi"><div class="kpi-label">F검정 모형 p값</div><div class="kpi-value" id="u-pmodel">—</div></div>
+<div class="kpi"><div class="kpi-label">표본 수 n</div><div class="kpi-value" id="u-n">—</div></div>
+</section>
+<section class="panel"><h2>설명변수별 기울기 β · p값 · 95% 신뢰구간</h2><p class="subtle">X가 1단위 증가할 때 등록률 Y의 예상 변화량은 %p입니다. 다중회귀의 계수는 나머지 변수를 일정하게 유지한 조건부 연관성입니다.</p><div class="u-table-wrap"><table><thead><tr><th>설명변수 / 단위</th><th>기울기 β</th><th>p값</th><th>95% CI 하한</th><th>95% CI 상한</th></tr></thead><tbody id="u-coefficients"></tbody></table></div><p id="u-warning" class="panel-note"></p></section>
+<section class="panel"><div class="panel-title-row"><div><div class="eyebrow">03 / OBSERVATIONS & CONDITIONAL FITS</div><h2>실제 장애유형별 등록률과 회귀 예측선</h2></div></div><p class="subtle">산점도 Y는 실제 등록률(%). 다중회귀선은 해당 X를 제외한 나머지 다섯 설명변수를 현재 완전관측 표본 평균으로 고정한 <strong>조건부 예측선</strong>이며 단순회귀선이 아닙니다.</p><div id="u-scatters" class="u-scatter-grid"></div><p id="u-scatter-status" class="panel-note"></p></section>
+<section class="panel"><div class="panel-title-row"><div><h2>연도별 회귀지표 추이</h2><p class="subtle">연도별 별도 회귀 결과입니다. 모형 추정이 불가능한 시점은 보간하지 않습니다.</p></div><button class="outline-button" id="u-trend-export">추이 CSV 저장</button></div>
+<label>다중회귀 설명변수 계수/기울기 선택<select id="u-trend-var"></select></label>
+<div class="u-trend-grid">
+<div><h3>기울기 β</h3><canvas id="u-trend-coef"></canvas></div>
+<div><h3>절편 β₀</h3><canvas id="u-trend-intercept"></canvas></div>
+<div><h3>R²</h3><canvas id="u-trend-r2"></canvas></div>
+<div><h3>수정 R²</h3><canvas id="u-trend-adjr2"></canvas></div>
+<div><h3>기울기 p값</h3><canvas id="u-trend-pcoef"></canvas></div>
+<div><h3>F검정 모형 p값</h3><canvas id="u-trend-pmodel"></canvas></div>
+</div><p class="panel-note">계수의 X 단위가 서로 다르므로 숫자 크기를 변수 간 직접 비교하지 마세요. p값 그래프와 CSV는 실제 p값입니다.</p></section>
+<div class="section-top"><div><div class="eyebrow">04 / COMPLETE REGRESSION INDEX</div><h2>시점·광역·기초지자체별 회귀 통계표</h2></div></div>
+<section class="panel"><p>행의 「Raw·관측치」를 선택하면 해당 모형의 statsmodels 출력과 실제 관측자료를 아래에서 확인할 수 있습니다.</p>
+<div class="u-index-controls">
+<label>연도·지역·장애유형 검색<input type="search" id="u-search" placeholder="연도, 지역, 장애유형"></label>
+<label>표 분석 단위<select id="u-index-scope"><option value="all">전체 분석 단위</option><option value="municipal">기초지자체 간 비교</option><option value="provincial">광역지자체 간 비교</option><option value="local_history">기초지자체 시계열</option></select></label>
+<label><input type="checkbox" id="u-all-types"> 전체 장애유형 결과 함께 비교</label>
+<label><input type="checkbox" id="u-all-regions"> 모든 광역지자체 결과 포함</label>
+<button class="outline-button" id="u-index-export">검색 결과 CSV 저장</button></div>
+<div class="u-table-wrap"><table id="u-index-table"><thead id="u-index-head"></thead><tbody id="u-index-body"></tbody></table></div>
+<div class="u-pager"><span id="u-index-count">—</span><button id="u-prev" class="pager">이전</button><button id="u-next" class="pager">다음</button></div></section>
+<section class="panel"><div class="panel-title-row"><div><h2>선택 모형 · Raw·관측치</h2><p class="subtle" id="u-detail-title">비교표 행을 선택하세요.</p></div><button class="outline-button" id="u-observation-export" disabled>관측치 CSV 저장</button></div>
+<h3>실제 statsmodels.OLS(...).fit().summary() 출력</h3>
+<pre id="u-raw" class="u-raw">모형 선택 후 원문이 표시됩니다.</pre>
+<h3>완전관측치 · 적합값 · 잔차</h3><p class="subtle" id="u-observation-count"></p>
+<div class="u-table-wrap"><table><thead id="u-observation-head"></thead><tbody id="u-observation-body"></tbody></table></div></section>
+<section class="panel"><div class="eyebrow">05 / RESEARCH METHODS AND LIMITATIONS</div><h2>변수의 정의·관측 범위·해석 유의사항</h2>
+<p>2014년은 재정자립도 세입과목 개편 시점이고, 2022년은 일부 장애 등록통계의 자료 가용성 한계입니다. 따라서 전체 연구 기간은 2014~2022년입니다. <strong>건강보험료 또는 진료비를 포함한 회귀는 예외 없이 2015~2022년</strong>만 이용합니다. 원본 2014년 CSV는 보존합니다.</p>
+<div class="u-table-wrap"><table><thead><tr><th>변수</th><th>계산식/단위</th><th>분모</th></tr></thead><tbody>
+<tr><td>장애유형별 등록률</td><td>선택 장애유형 등록인원 ÷ 주민등록인구 × 100 (%)</td><td>해당 연도·지역 주민등록인구</td></tr>
+<tr><td>재정자립도</td><td>원본 0~100 (%) ÷ 100 → 0~1, 개편 전·후 선택</td><td>공식 지방재정 통계</td></tr>
+<tr><td>65세 이상·0~14세 인구비율</td><td>해당 연령 주민등록연앙인구 ÷ 전체 주민등록연앙인구 × 100 (%)</td><td>주민등록연앙인구</td></tr>
+<tr><td>합계출산율</td><td>여성 1명당 출생아 수 (명/여성)</td><td>출산율 공식 기간지표</td></tr>
+<tr><td>1인당 진료비</td><td>연간 총진료비(천원) ÷ 주민등록연앙인구 ÷ 10 (만원/인/년)</td><td>주민등록연앙인구</td></tr>
+<tr><td>가구당 건강보험료</td><td>연간 총보험료(천원) ÷ 주민등록세대수 ÷ 10 (만원/세대/년)</td><td>주민등록세대수</td></tr>
+</tbody></table></div>
+<p>진료비는 개인의 실제 본인부담액이나 모든 비급여를 포함한 의료비가 아닙니다. 가구당 건강보험료는 지역 총보험료를 주민등록세대수로 나눈 환산치이지, 가구별 고지액의 단순평균이 아닙니다. 건강보험료는 1인당으로 환산하지 않습니다.</p>
+<p>지역 단위 OLS는 통계적 연관성이지 인과관계가 아닙니다. 단순회귀 계수는 통제변수 없이 X의 1단위 증가와 연결된 등록률 변화(%p)를, 6변수 다중회귀 계수는 다른 다섯 X를 고정할 때의 변화(%p)를 뜻합니다. 서로 다른 단위의 계수 크기를 직접 비교하지 마세요. 인구구조·진료비·보험료·재정자립도 사이의 다중공선성, 건강비용과 지역의 질병부담 간 역방향 관계, 연도 통합 OLS의 지자체 반복관측·연도효과 미통제, 결측·행정구역 개편·집계 기준 차이 및 표본 수 변화를 고려해야 합니다.</p>
+<p>경기도 2014~2017년의 「청각·언어」 통합 등록인원은 청각·언어 각 유형에 임의 배분하거나 결측을 0으로 채우지 않습니다. 모든 불가한 회귀는 추정 실패 이유를 표시합니다. <a href="quality.html">품질 감사</a> · <a href="../README.md">연구 README</a></p></section>
+</main></div></body></html>

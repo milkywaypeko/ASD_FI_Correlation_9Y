@@ -1,0 +1,107 @@
+name: Verify and stage unified regression site
+
+on:
+  push:
+    branches:
+      - feat/unified-six-variable-regression-20261107
+  pull_request:
+    branches:
+      - main
+  workflow_dispatch:
+
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - name: Install analysis and test packages
+        run: |
+          python -m pip install -r requirements.txt
+          python -m pip install pytest
+      - name: Existing and new regression tests
+        run: python -m pytest tests -q
+      - name: Regenerate entire static site offline from checked out CSVs
+        run: python build.py
+      - name: Verify generated unified index and model details
+        run: |
+          python - <<'PY'
+          import json
+          from pathlib import Path
+          root=Path('site/data')
+          manifest=json.loads((root/'unified_manifest.json').read_text(encoding='utf-8'))
+          assert set(manifest['models']) == {'six','age65','under15','medical','premium','fertility','fiscal'}
+          for key,definition in manifest['models'].items():
+              idx=json.loads((root/f'unified_index_{key}.json').read_text(encoding='utf-8'))
+              assert idx, key
+              assert all(m['year']=='전기간' or m['year'] in definition['years'] for m in idx), key
+              if key in ('six','medical','premium'):
+                  assert 2014 not in definition['years']
+                  assert not any(m['year']==2014 for m in idx)
+              if key=='six':
+                  assert all(len(m['coefficients'])==6 for m in idx)
+              fitted=next((m for m in idx if m['intercept'] is not None),None)
+              assert fitted is not None, key
+              detail=json.loads((Path('site')/fitted['shard']).read_text(encoding='utf-8'))[fitted['id']]
+              assert detail['model']['n']==fitted['n']==len(detail['observations'])
+              assert detail['model']['r2']==fitted['r2']
+              assert detail['model']['adj_r2']==fitted['adj_r2']
+              assert detail['model']['p_model']==fitted['p_model']
+              assert 'OLS Regression Results' in detail['model']['raw']
+          assert not list(root.glob('demographic_multi_models_*.json'))
+          assert not list(root.glob('household_premium_multi_models_*.json'))
+          print('UNIFIED MODEL, YEAR, SAMPLE, FULL OLS, AND OBSERVATION CHECKS: PASS')
+          PY
+      - name: Run all tests after regeneration
+        run: python -m pytest tests -q
+      - name: Archive only generated changes for a publishing job
+        if: github.event_name == 'push' && github.ref == 'refs/heads/feat/unified-six-variable-regression-20261107'
+        run: |
+          mkdir -p /tmp/unified-output
+          cp -a site/data /tmp/unified-output/data
+          cp -a index.html /tmp/unified-output/root-index.html
+      - name: Upload verified generated output
+        if: github.event_name == 'push' && github.ref == 'refs/heads/feat/unified-six-variable-regression-20261107'
+        uses: actions/upload-artifact@v4
+        with:
+          name: verified-unified-regression-site
+          path: /tmp/unified-output/
+          retention-days: 2
+          compression-level: 5
+
+  stage-generated-data:
+    needs: verify
+    if: github.event_name == 'push' && github.ref == 'refs/heads/feat/unified-six-variable-regression-20261107'
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: true
+      - uses: actions/download-artifact@v4
+        with:
+          name: verified-unified-regression-site
+          path: /tmp/unified-output
+      - name: Synchronize only verified generated files
+        run: |
+          test -f /tmp/unified-output/data/unified_manifest.json
+          test -f /tmp/unified-output/root-index.html
+          rm -rf site/data
+          cp -a /tmp/unified-output/data site/data
+          cp /tmp/unified-output/root-index.html index.html
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add -A site/data index.html
+          if ! git diff --cached --quiet; then
+            git commit -m "build: commit verified unified statsmodels JSON and Pages entry"
+            git push origin HEAD:feat/unified-six-variable-regression-20261107
+          fi

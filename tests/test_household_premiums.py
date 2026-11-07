@@ -93,31 +93,25 @@ class TestHouseholdPremiums(unittest.TestCase):
         readme=(BASE/'README.md').read_text(encoding='utf-8')
         self.assertIn('## 변수의 단위·환산·회귀계수 해석 (필독)',readme)
         self.assertIn('만원/세대/년',readme)
-        self.assertIn('0.0006%',readme)
         self.assertIn('세대수 CSV',readme)
-        for filename in ('age-medical-multi.html', 'age65-ols.html',
-                         'under15-ols.html','medical-ols.html',
-                         'household-premium-ols.html','quality.html'):
-            html=(BASE/'site'/filename).read_text(encoding='utf-8')
-            self.assertIn('id="variable-units"',html, filename)
-            self.assertIn('만원/세대/년',html, filename)
-            self.assertIn('0.0006%',html, filename)
-            self.assertIn('만원/인/년',html, filename)
-            self.assertIn('재정자립도 +1%p',html, filename)
-        js=(BASE/'site'/'assets/js/age-medical.js').read_text(encoding='utf-8')
-        self.assertIn('withPremium:false',js)
-        self.assertIn('withPremium=e.target.value',js)
+        page=(BASE/'site'/'unified.html').read_text(encoding='utf-8')
+        self.assertIn('만원/세대/년',page)
+        self.assertIn('만원/인/년',page)
+        self.assertIn('u-year',page)
+        self.assertIn('u-adjr2',page)
+        self.assertIn('u-r2',page)
 
-    def test_new_page_and_multivariate_toggle(self):
-        html=(BASE/'site'/'household-premium-ols.html').read_text(encoding='utf-8')
-        self.assertIn('data-analysis="premium"',html)
-        self.assertIn('id="an-type"',html)
-        multi=(BASE/'site'/'age-medical-multi.html').read_text(encoding='utf-8')
-        self.assertIn('id="an-premium-model"',multi)
-        js=(BASE/'site'/'assets/js/age-medical.js').read_text(encoding='utf-8')
-        self.assertIn('household_premium_ols_models',js)
-        self.assertIn('household_premium_multi_models',js)
-        self.assertIn('premium_10k_per_household',js)
+    def test_new_pages_and_no_five_variable_toggle(self):
+        for path,model in [('age-medical-multi.html','six'),
+                           ('household-premium-ols.html','premium')]:
+            html=(BASE/'site'/path).read_text(encoding='utf-8')
+            self.assertIn('unified.html?model='+model,html)
+        main=(BASE/'site'/'unified.html').read_text(encoding='utf-8')
+        script=(BASE/'site'/'assets'/'js'/'unified.js').read_text(encoding='utf-8')
+        self.assertNotIn('an-premium-model',main)
+        self.assertIn('premium_10k_per_household',(
+            BASE/'unified_analysis.py').read_text(encoding='utf-8'))
+        self.assertIn('state.model',script)
 
 
 if __name__=='__main__':
