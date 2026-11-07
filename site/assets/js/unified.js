@@ -45,6 +45,7 @@
   let charts = [], trendCharts = [], run = 0;
   const pageSize = 30;
   const spec = () => manifest.models[state.model];
+  const isSimple = () => state.model !== 'six';
   const fields = () => spec().fiscal ?
     [state.fiscal, ...spec().fields] : [...spec().fields];
   const modelFields = item => item && item.mode && spec().fiscal ?
@@ -104,6 +105,14 @@
     vars.forEach((field, i) => opt($('u-trend-var'), String(i), label(field)));
     state.trendVar = Math.min(state.trendVar, vars.length - 1);
     $('u-trend-var').value = String(state.trendVar);
+    document.querySelectorAll('[data-simple-only]').forEach(element => {
+      element.hidden = !isSimple();
+      element.style.display = isSimple() ? '' : 'none';
+    });
+    text('u-coef-heading', isSimple() ? '단순회귀 기울기 β₁ · SciPy 피어슨 r' : '다중회귀 설명변수별 기울기 β');
+    text('u-coef-method', isSimple()
+      ? '기울기 β₁은 X 1단위 증가 시 등록률 Y의 예상 변화량(%p)입니다. 피어슨 r은 X–Y 이변량 선형 상관계수입니다.'
+      : '각 기울기 β는 나머지 설명변수를 일정하게 유지한 조건부 연관성입니다. 다중회귀에서는 이변량 상관계수를 표시하지 않습니다.');
     // Every source with a healthcare component excludes 2014, including trend and CSV.
     document.title = spec().label + ' | 장애인 등록률 연구';
   }
@@ -132,13 +141,17 @@
   function showCoefficients(item, detail) {
     const body = $('u-coefficients'); body.replaceChildren();
     const model = detail?.model;
+    if (!item) return;
     for (const [i, field] of modelFields(item).entries()) {
       const c = model?.coefficients?.[field] || {};
       const tr = document.createElement('tr');
-      for (const value of [label(field), fmt(c.coef, 10),
-                            fmt(item?.correlations?.[i], 9), fmt(c.p, 9),
-                            fmt(item?.correlation_pvalues?.[i], 9),
-                            fmt(c.ci?.[0], 9), fmt(c.ci?.[1], 9)]) {
+      const values = isSimple()
+        ? [label(field), fmt(c.coef, 10), fmt(item?.correlations?.[i], 9),
+           fmt(c.p, 9), fmt(item?.correlation_pvalues?.[i], 9),
+           fmt(c.ci?.[0], 9), fmt(c.ci?.[1], 9)]
+        : [label(field), fmt(c.coef, 10), fmt(c.p, 9),
+           fmt(c.ci?.[0], 9), fmt(c.ci?.[1], 9)];
+      for (const value of values) {
         const td = document.createElement('td'); td.textContent = value; tr.appendChild(td);
       }
       body.appendChild(tr);
@@ -264,6 +277,16 @@
       (item.mode ? ' / '+item.mode : '')+' / n='+item.n);
     const correlationsBody = $('u-detail-corr');
     correlationsBody.replaceChildren();
+    if (!isSimple()) {
+      text('u-scipy-raw', '다중회귀에서는 SciPy 상관계수 표시를 생략합니다.');
+      $('u-scipy-export').disabled = true;
+      text('u-raw', detail.model.raw || detail.model.warning || '모형을 추정할 수 없습니다.');
+      $('u-observation-export').disabled = false;
+      $('u-observation-export').onclick = () => download(
+        'observations_'+state.model+'_'+item.id+'.csv',
+        [detail.columns,...detail.observations]);
+      return;
+    }
     const predictorSelect = $('u-scipy-variable');
     predictorSelect.replaceChildren();
     modelFields(item).forEach((field, i) => {
@@ -313,6 +336,8 @@
     if (!item) {
       text('u-corr','—');
       text('u-corr-variable','');
+      text('u-slope','—');
+      text('u-slope-variable','');
       for (const id of ['u-intercept','u-r2','u-adjr2','u-pmodel','u-n','u-caption']) text(id,'—');
       $('u-detail-corr').replaceChildren();
       showCoefficients(null,null);
@@ -330,8 +355,10 @@
       text('u-adjr2',fmt(item.adj_r2));
       text('u-pmodel',fmt(item.p_model,9));
       text('u-n',item.n);
-      text('u-corr',fmt(item.correlations?.[state.trendVar], 9));
-      text('u-corr-variable','· '+label(modelFields(item)[state.trendVar]));
+      text('u-slope',fmt(item.coefficients?.[0], 9));
+      text('u-slope-variable',isSimple() ? '· '+label(modelFields(item)[0]) : '');
+      text('u-corr',isSimple() ? fmt(item.correlations?.[0], 9) : '—');
+      text('u-corr-variable',isSimple() ? '· '+label(modelFields(item)[0]) : '');
       text('u-caption',item.type+' · '+item.region.replace('|',' ')+' · '+item.year);
       text('u-warning',item.warning || '해당 계수는 인과효과가 아니라 관측자료의 통계적 연관성입니다.');
       showCoefficients(item,detail);
@@ -402,8 +429,10 @@
     const maxVariables = spec().fiscal ? spec().fields.length+1 : spec().fields.length;
     for(let i=0;i<maxVariables;i++) {
       columns.push(col('beta'+i,'β'+(i+1),false));
-      columns.push(col('corr'+i,'r'+(i+1)+' (Y–X)',false));
-      columns.push(col('rp'+i,'r'+(i+1)+' SciPy p값',false));
+      if (isSimple()) {
+        columns.push(col('corr'+i,'r'+(i+1)+' (Y–X)',false));
+        columns.push(col('rp'+i,'r'+(i+1)+' SciPy p값',false));
+      }
       columns.push(col('p'+i,'β'+(i+1)+' p값',false));
     }
     columns.push(col('action','상세',false));
@@ -472,9 +501,9 @@
       ['r2',m=>m.r2,'R²'],
       ['adjr2',m=>m.adj_r2,'수정 R²'],
       ['pcoef',m=>m.pvalues[i],'기울기 p값'],
-      ['pmodel',m=>m.p_model,'모형 F p값'],
-      ['corr',m=>m.correlations?.[i],'피어슨 r (Y–X)']
+      ['pmodel',m=>m.p_model,'모형 F p값']
     ];
+    if (isSimple()) configs.push(['corr',m=>m.correlations?.[i],'피어슨 r (Y–X)']);
     for(const [id,value,title] of configs) {
       if(!window.Chart) continue;
       const instance=new Chart($('u-trend-'+id),{type:'line',
@@ -487,19 +516,22 @@
       });
       trendCharts.push(instance);
     }
-    $('u-trend-export').onclick=()=>download(
-      'yearly_regression_'+state.model+'_'+state.dtype+'.csv',
-      [['연도','장애유형','광역/기초','재정자립도 기준','설명변수','기울기 β','피어슨 r (Y–X)','SciPy r p값(양측)','절편 β₀','R²','수정 R²','기울기 p값','F검정 모형 p값','표본 n'],
-       ...spec().years.map((year,j)=>{
-         const m=rows[j];
-         return [year,state.dtype,region(),state.fiscal,fields()[i],
-           valid(m)?m.coefficients[i]:null,m?.correlations?.[i]??null,
-           m?.correlation_pvalues?.[i]??null,
-           valid(m)?m.intercept:null,
-           valid(m)?m.r2:null,valid(m)?m.adj_r2:null,
-           valid(m)?m.pvalues[i]:null,valid(m)?m.p_model:null,m?.n??null];
-       })]
-    );
+    $('u-trend-export').onclick=()=>{
+      const headings=['연도','장애유형','광역/기초','재정자립도 기준','설명변수','기울기 β'];
+      if (isSimple()) headings.push('피어슨 r (Y–X)','SciPy r p값(양측)');
+      headings.push('절편 β₀','R²','수정 R²','기울기 p값','F검정 모형 p값','표본 n');
+      download('yearly_regression_'+state.model+'_'+state.dtype+'.csv',
+        [headings,...spec().years.map((year,j)=>{
+          const m=rows[j];
+          const values=[year,state.dtype,region(),state.fiscal,fields()[i],
+            valid(m)?m.coefficients[i]:null];
+          if (isSimple()) values.push(m?.correlations?.[i]??null,m?.correlation_pvalues?.[i]??null);
+          values.push(valid(m)?m.intercept:null,valid(m)?m.r2:null,
+            valid(m)?m.adj_r2:null,valid(m)?m.pvalues[i]:null,
+            valid(m)?m.p_model:null,m?.n??null);
+          return values;
+        })]);
+    };
   }
   async function render(changeModel=false) {
     const token=++run;
@@ -553,8 +585,8 @@
       state.trendVar=Number(e.target.value);
       drawTrends();
       if (selected) {
-        text('u-corr',fmt(selected.correlations?.[state.trendVar],9));
-        text('u-corr-variable','· '+label(modelFields(selected)[state.trendVar]));
+        text('u-corr',isSimple() ? fmt(selected.correlations?.[0],9) : '—');
+        text('u-corr-variable',isSimple() ? '· '+label(modelFields(selected)[0]) : '');
       }
     };
     $('u-search').oninput=e=>{state.search=e.target.value;state.page=0;drawIndex();};
@@ -565,15 +597,27 @@
     $('u-next').onclick=()=>{state.page++;drawIndex();};
     $('u-index-export').onclick=()=> {
       const width=spec().fiscal?spec().fields.length+1:spec().fields.length;
+      const headers=['시점','장애유형','분석 단위','광역/기초','재정자립도 기준','표본 n',
+        '절편 β₀','R²','수정 R²','모형 F p값'];
+      for(let i=0;i<width;i++) {
+        headers.push('β'+(i+1));
+        if (isSimple()) headers.push('SciPy 피어슨 r'+(i+1),'SciPy p'+(i+1)+'(양측)');
+        headers.push('β'+(i+1)+' p값');
+      }
+      headers.push('상세 파일');
       download('regression_index_'+state.model+'.csv',
-        [['시점','장애유형','분석 단위','광역/기초','재정자립도 기준','표본 n',
-          '절편 β₀','R²','수정 R²','모형 F p값',
-          ...Array.from({length:width},(_,i)=>['β'+(i+1),'SciPy 피어슨 r'+(i+1),'SciPy p'+(i+1)+'(양측)','β'+(i+1)+' p값']).flat(),'상세 파일'],
-          ...filtered.map(item=>[item.year,item.type,item.scope,item.region,item.mode,
-            item.n,item.intercept,item.r2,item.adj_r2,item.p_model,
-            ...item.coefficients.flatMap((beta,i)=>[
-              beta,item.correlations?.[i]??null,item.correlation_pvalues?.[i]??null,item.pvalues[i]
-            ]),item.shard])]);
+        [headers,...filtered.map(item=>{
+          const values=[item.year,item.type,item.scope,item.region,item.mode,
+            item.n,item.intercept,item.r2,item.adj_r2,item.p_model];
+          item.coefficients.forEach((beta,i)=>{
+            values.push(beta);
+            if (isSimple()) values.push(item.correlations?.[i]??null,
+                                         item.correlation_pvalues?.[i]??null);
+            values.push(item.pvalues[i]);
+          });
+          values.push(item.shard);
+          return values;
+        })]);
     };
     render();
   } catch(error) {
