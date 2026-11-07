@@ -27,7 +27,7 @@ class TestDataIntegration(unittest.TestCase):
         self.assertEqual(clean_district('제주특별자치도','제주시'), '제주특별자치도')
 
     def test_disability_2014_and_2018_gyeonggi(self):
-        data,unknown,dup=parse_disability(ROOT/'Statistics'/'Disability')
+        data,unknown,dup=parse_disability(ROOT/'Statistics'/'장애인등록'/'Disability')
         self.assertFalse(dup)
         old=data[(2014,'경기도','수원시')]
         new=data[(2018,'경기도','수원시')]
@@ -39,7 +39,7 @@ class TestDataIntegration(unittest.TestCase):
         self.assertIn('언어',new)
 
     def test_fiscal_normalization_is_non_destructive(self):
-        filename=ROOT/'Statistics'/'Financial Independence.csv'
+        filename=ROOT/'Statistics'/'재정'/'Financial Independence.csv'
         before=filename.read_bytes()
         local, totals, _=parse_fiscal(filename)
         self.assertEqual(local[(2022,'서울특별시','종로구','after')],0.4751)
@@ -48,9 +48,9 @@ class TestDataIntegration(unittest.TestCase):
         self.assertEqual(before,filename.read_bytes(), '재정 CSV 원본을 덮어쓰면 안 됩니다.')
 
     def test_birth_matching_and_special_province(self):
-        local, totals, dup = parse_birth_rate(ROOT/'Statistics'/'Birth rate.csv')
+        local, totals, dup = parse_birth_rate(ROOT/'Statistics'/'출산율'/'Birth rate.csv')
         self.assertFalse(dup)
-        disability, _, _=parse_disability(ROOT/'Statistics'/'Disability')
+        disability, _, _=parse_disability(ROOT/'Statistics'/'장애인등록'/'Disability')
         self.assertEqual(len(set(disability).difference(local)),0)
         for year in range(2014,2023):
             for province in ('제주특별자치도','세종특별자치시'):
@@ -73,13 +73,13 @@ class TestDataIntegration(unittest.TestCase):
         self.assertEqual(len(raw),1)
 
     def test_south_korea_population_join_and_special_units(self):
-        population,totals,errors=parse_population(ROOT/'Statistics'/'Resident population.csv')
+        population,totals,errors=parse_population(ROOT/'Statistics'/'인구'/'Resident population.csv')
         self.assertFalse(errors)
         self.assertEqual(population[(2022,'제주특별자치도','제주특별자치도')],
                          totals[(2022,'제주특별자치도')])
         self.assertEqual(population[(2014,'충청북도','청주시')],831521)
         self.assertNotIn((2014,'충청북도','청원군'),population)
-        fiscal,subtotals,errors=parse_fiscal(ROOT/'Statistics'/'Financial Independence.csv')
+        fiscal,subtotals,errors=parse_fiscal(ROOT/'Statistics'/'재정'/'Financial Independence.csv')
         self.assertFalse(errors)
         self.assertEqual(fiscal[(2022,'제주특별자치도','제주특별자치도','before')],
                          subtotals[(2022,'제주특별자치도','before')])

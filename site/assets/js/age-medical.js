@@ -7,25 +7,31 @@
    multi:['demographic_multi_models','다중회귀',null],
    age65:['age65_ols_models','65세 이상 고령인구','age65_percent'],
    under15:['under15_ols_models','0~14세 저연령 인구','under15_percent'],
-   medical:['medical_ols_models','1인당 진료비','medical_10k_per_person']
+   medical:['medical_ols_models','1인당 진료비','medical_10k_per_person'],
+   premium:['household_premium_ols_models','가구당 건강보험료','premium_10k_per_household']
  }[mode];
  if(!spec)return;
- const isMulti=mode==='multi',prefix=spec[0];
+ const isMulti=mode==='multi';
+ const prefix=()=>isMulti&&state.withPremium?'household_premium_multi_models':spec[0];
  const labels={
    before:'재정자립도(개편 전, 0~1)',after:'재정자립도(개편 후, 0~1)',
    age65_percent:'65세 이상 인구비율(%)',under15_percent:'0~14세 인구비율(%)',
-   fertility:'합계출산율(명/여성)',medical_10k_per_person:'1인당 진료비(만원)'
+   fertility:'합계출산율(명/여성)',medical_10k_per_person:'1인당 진료비(만원)',
+   premium_10k_per_household:'연간 가구당 건강보험료(만원/세대)'
  };
- const state={scope:'municipal',province:'전국',district:'',year:2022,allYears:false,fiscal:'after',dtype:'전체'};
- let meta,municipal,provincial,pooled,history,yearly={},chart,selected,visible=[];
+ const state={scope:'municipal',province:'전국',district:'',year:2022,allYears:false,fiscal:'after',dtype:'전체',withPremium:false};
+ let meta,municipal,provincial,chart,selected,visible=[];
+ const cache={};
  let requestId=0;
- const vars=()=>isMulti?[state.fiscal,'age65_percent','under15_percent','fertility','medical_10k_per_person']:[spec[2]];
+ const vars=()=>isMulti?[state.fiscal,'age65_percent','under15_percent','fertility','medical_10k_per_person',
+     ...(state.withPremium?['premium_10k_per_household']:[])]:[spec[2]];
  const year=()=>state.scope==='local_history'||state.allYears?'전기간':state.year;
  const region=()=>state.scope==='provincial'?'전국':state.scope==='local_history'?state.province+'|'+state.district:state.province;
  const find=items=>items?.find(m=>m.scope===state.scope&&m.region===region()&&String(m.year)===String(year())&&(!isMulti||m.mode===state.fiscal)&&(!m.type||m.type===state.dtype));
  const outcome=()=>state.dtype==='전체'?'전체 장애인 등록률(%)':state.dtype+' 장애유형 등록률(%)';
  const valid=m=>m&&m.intercept!=null;
  const set=(id,value)=>Lab.text(id,value);
+ const loadOnce=path=>cache[path]||(cache[path]=Lab.load(path).catch(err=>{delete cache[path];throw err;}));
  const escape=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
  function updateDistrict(){
    const select=$('an-district');select.replaceChildren();
@@ -105,20 +111,24 @@
    $('an-year').disabled=state.allYears||state.scope==='local_history';
    $('an-year').value=state.year;
    $('an-mode-wrap').hidden=!isMulti;
+   if($('an-premium-model-wrap'))$('an-premium-model-wrap').hidden=!isMulti;
    set('an-year-caption',year()==='전기간'?'2014~2022년 통합':state.year+'년');
    set('an-outcome',outcome()+' = 해당 유형의 등록인원 ÷ 주민등록인구 × 100 (%)');
-   set('an-caption',state.dtype+' · '+region().replace('|',' · ')+' · '+year()+' · '+(state.scope==='provincial'?'광역 간':state.scope==='local_history'?'개별 기초 시계열':'기초 간'));
+   set('an-caption',state.dtype+' · '+region().replace('|',' · ')+' · '+year()+' · '+(state.scope==='provincial'?'광역 간':state.scope==='local_history'?'개별 기초 시계열':'기초 간')+(isMulti?(state.withPremium?' · 가구당 보험료 포함':' · 기존 모형'):''));
    $('an-export').disabled=true;
    set('an-warning','선택한 장애유형의 사전 계산 모형을 불러오는 중입니다.');
    let items;
    try {
      if(state.dtype==='전체') {
-       items=state.scope==='local_history'?history:state.allYears?pooled:yearly[String(state.year)+(isMulti?state.fiscal:'')];
+       const source=state.scope==='local_history'?'_local_history':
+         state.allYears?'_pooled':'_'+state.year+(isMulti?'_'+state.fiscal:'');
+       const filename='data/'+prefix()+source+'.json';
+       items=await loadOnce(filename);
      } else {
        const index=meta.types.indexOf(state.dtype);
        if(index<0)throw Error('지원하지 않는 장애유형: '+state.dtype);
-       const filename='data/'+prefix+'_type_'+String(index).padStart(2,'0')+'.json';
-       const payload=await Lab.load(filename);
+       const filename='data/'+prefix()+'_type_'+String(index).padStart(2,'0')+'.json';
+       const payload=await loadOnce(filename);
        if(payload.type!==state.dtype)throw Error('선택한 장애유형과 파일 내용이 일치하지 않습니다.');
        items=payload.models;
      }
@@ -140,7 +150,9 @@
    const special=state.dtype==='청각·언어'
      ? '※ 청각·언어는 2014~2017년 경기도 통합 집계만 포함합니다. 다른 유형 및 지역에 0으로 대체하지 않으며 전국 대표성을 갖지 않습니다. '
      : '';
-   set('an-warning',special+(selected?.warning||(
+   const absent=vars().includes('premium_10k_per_household')&&visible.length===0?
+      '가구당 보험료를 계산하려면 Statistics/인구/행정구역(시군구)별 주민등록세대수.csv가 필요합니다. 공식 세대수 누락 또는 보험료 검증 오류가 있는 관측치는 분석에서 제외합니다. ':'';
+   set('an-warning',special+absent+(selected?.warning||(
      isMulti?'다른 설명변수들을 함께 고려한 조건부 연관성입니다.':'단순회귀는 공변량을 통제하지 않습니다.')));
    set('an-raw',selected?.raw||'해당 조건에서 추정 불가');
    showCoefficients(selected);showObservations();showChart();
@@ -160,16 +172,10 @@
  }
  try {
    meta=await Lab.load('data/meta.json');
-   [municipal,provincial,pooled,history]=await Promise.all([
-     Lab.load('data/municipalities.json'),Lab.load('data/provinces.json'),
-     Lab.load('data/'+prefix+'_pooled.json'),Lab.load('data/'+prefix+'_local_history.json')
+   [municipal,provincial]=await Promise.all([
+     loadOnce('data/municipalities.json'),loadOnce('data/provinces.json')
    ]);
-   const pending=[];
-   for(let year=2014;year<=2022;year++)for(const fiscal of(isMulti?['before','after']:[''])){
-     const key=String(year)+(isMulti?fiscal:'');
-     pending.push(Lab.load('data/'+prefix+'_'+year+(isMulti?'_'+fiscal:'')+'.json').then(m=>{yearly[key]=m;}));
-   }
-   await Promise.all(pending);
+   // Only fetch the selected model; avoid downloading every yearly model upfront.
    Lab.opt($('an-province'),'전국','전국');
    meta.provinces.forEach(value=>Lab.opt($('an-province'),value,value));
    meta.types.forEach(dtype=>Lab.opt($('an-type'),dtype,dtype));
@@ -184,6 +190,7 @@
    $('an-province').onchange=e=>{state.province=e.target.value;updateDistrict();render();};
    $('an-district').onchange=e=>{state.district=e.target.value;render();};
    $('an-mode').onchange=e=>{state.fiscal=e.target.value;render();};
+   if($('an-premium-model'))$('an-premium-model').onchange=e=>{state.withPremium=e.target.value==='include';render();};
    $('an-type').onchange=e=>{state.dtype=e.target.value;render();};
    $('an-year').oninput=e=>{state.year=Number(e.target.value);render();};
    $('an-all-years').onchange=e=>{state.allYears=e.target.checked;render();};

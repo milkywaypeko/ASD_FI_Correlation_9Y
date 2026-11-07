@@ -32,8 +32,8 @@ class TestAgeMedicalRegressions(unittest.TestCase):
             self.assertEqual(parsed[(2014, "서울특별시", "서울특별시")]["age65_percent"], 50)
 
     def test_real_age_and_medical_files_are_readable(self):
-        age = parse_age_population(STATS / "연령(5세)별 주민등록연앙인구.csv")
-        costs, duplicates = parse_medical_expenses(STATS)
+        age = parse_age_population(STATS / "인구" / "연령(5세)별 주민등록연앙인구.csv")
+        costs, duplicates = parse_medical_expenses(STATS / "국가건강정보" / "진료비")
         self.assertGreater(len(age), 1000)
         self.assertGreater(len(costs), 1000)
         self.assertIn((2022, "서울특별시", "서울특별시"), costs)

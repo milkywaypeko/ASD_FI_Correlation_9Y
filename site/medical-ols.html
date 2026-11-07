@@ -11,7 +11,7 @@
 </head><body data-analysis="medical">
 <div class="app-shell"><aside class="sidebar">
 <div class="brand-mark">✳</div><div class="brand-text">PUBLIC DATA LAB<span>2014 — 2022</span></div>
-<nav class="navigation"><a href="index.html"><span>▦</span> 데이터 탐색</a><a href="results.html"><span>≋</span> 회귀결과 통합</a><a href="multivariate.html"><span>∑</span> 기존 다중회귀</a><a href="birth-ols.html"><span>↗</span> 출산율 × 장애유형 OLS</a><a href="fiscal-birth.html"><span>◈</span> 재정자립도 × 출산율 OLS</a><a href="age-medical-multi.html"><span>◉</span> 재정자립도·인구구조·출산율·의료비 다중회귀</a><a href="age65-ols.html"><span>◉</span> 65세 이상 고령인구 × 장애인 등록률</a><a href="under15-ols.html"><span>◉</span> 0~14세 저연령 인구 × 장애인 등록률</a><a class="active" href="medical-ols.html"><span>◉</span> 1인당 진료비 × 장애인 등록률</a><a href="quality.html"><span>ⓘ</span> 데이터 품질·방법</a></nav>
+<nav class="navigation"><a href="index.html"><span>▦</span> 데이터 탐색</a><a href="results.html"><span>≋</span> 회귀결과 통합</a><a href="multivariate.html"><span>∑</span> 기존 다중회귀</a><a href="birth-ols.html"><span>↗</span> 출산율 × 장애유형 OLS</a><a href="fiscal-birth.html"><span>◈</span> 재정자립도 × 출산율 OLS</a><a href="age-medical-multi.html"><span>◉</span> 재정자립도·인구구조·출산율·의료비 다중회귀</a><a href="age65-ols.html"><span>◉</span> 65세 이상 고령인구 × 장애인 등록률</a><a href="under15-ols.html"><span>◉</span> 0~14세 저연령 인구 × 장애인 등록률</a><a class="active" href="medical-ols.html"><span>◉</span> 1인당 진료비 × 장애인 등록률</a><a href="household-premium-ols.html"><span>◉</span> 가구당 건강보험료 × 장애유형별 등록률</a><a href="quality.html"><span>ⓘ</span> 데이터 품질·방법</a></nav>
 <div class="sidebar-bottom"><div class="sidebar-eyebrow">통계 해석</div>
 <p>지역 단위 관측자료를 이용한 탐색적 OLS 결과입니다.</p>
 <div class="small-divider"></div><p>계수·p값은 인과관계를 입증하지 않습니다. 연도 통합에서는 반복관측·연도효과가 통제되지 않습니다.</p></div></aside>
@@ -52,4 +52,22 @@
 서로 다른 출처의 모집단·집계 방식에 차이가 있을 수 있으며 의료비는 보험 진료비 통계로 모든 비급여 지출을 뜻하지 않습니다.
 동일 시점의 지역별 관계를 기술하며 장애 발생의 원인이나 정책효과로 해석해서는 안 됩니다.</p>
 <p><a href="quality.html">기존 자료 품질 설명</a> · <a href="data/age_medical_quality.json">추가 분석 결합·결측 감사(JSON)</a></p></section>
+
+<section class="panel unit-guide" id="variable-units" aria-labelledby="units-title">
+  <div class="eyebrow">VARIABLE DEFINITIONS / UNITS</div>
+  <h2 id="units-title">변수 단위 · 계산식 · 회귀계수 해석</h2>
+  <p class="panel-note"><strong>Y는 이미 백분율(%)입니다.</strong> 예: Y = 0.0006이면 전체 인구의 0.0006%(100만 명당 6명)이지 0.06%가 아닙니다. 모든 예측값은 %, 잔차는 %p 단위입니다.</p>
+  <div class="an-table-scroll"><table class="unit-table"><thead><tr><th>항목</th><th>사용 단위</th><th>계산·표본 기준</th><th>OLS 계수의 1단위 변화</th></tr></thead><tbody>
+    <tr><td>장애유형별 등록률 (Y)</td><td>%</td><td>해당 유형 등록인원 ÷ 같은 연도 주민등록인구 × 100</td><td>Y = 1은 등록률 1%p</td></tr>
+    <tr><td>재정자립도 X</td><td>0~1</td><td>원본 재정자립도(%) ÷ 100; 세입과목 개편 전·후 별도</td><td>재정자립도 +1%p(=0.01)당 변화는 β×0.01%p</td></tr>
+    <tr><td>65세 이상 인구비율 X</td><td>%</td><td>65~69세부터 85세 이상 인구 합 ÷ 주민등록연앙인구 × 100</td><td>해당 구성비 +1%p당 Y 변화 β%p</td></tr>
+    <tr><td>0~14세 인구비율 X</td><td>%</td><td>0~4·5~9·10~14세 인구 합 ÷ 주민등록연앙인구 × 100</td><td>해당 구성비 +1%p당 Y 변화 β%p</td></tr>
+    <tr><td>합계출산율 X</td><td>명/여성</td><td>해당 연도 여성 1명당 기대 출생아 수(기간지표)</td><td>출산율 +1명/여성당 Y 변화 β%p</td></tr>
+    <tr><td>연간 1인당 진료비 X</td><td>만원/인/년</td><td>전체 연령 연간 진료비(천원) ÷ 주민등록연앙인구 ÷ 10</td><td>1인당 연간 진료비 +1만원당 Y 변화 β%p</td></tr>
+    <tr><td>연간 가구당 건강보험료 X</td><td>만원/세대/년</td><td>연간 보험료 총액(천원) ÷ 같은 연도 주민등록세대수 ÷ 10</td><td>가구당 연간 보험료 +1만원당 Y 변화 β%p</td></tr>
+  </tbody></table></div>
+  <p class="panel-note"><strong>의료비 ≠ 건강보험료.</strong> 1인당 진료비는 지역 진료비 총액의 인구당 환산액이며 환자 본인부담액이 아닙니다. 가구당 보험료는 지역 보험료 총액을 주민등록세대수로 나눈 환산액이며 개별 가구의 실제 보험료 고지액·월평균 보험료가 아닙니다. 예: 연간 총보험료 5,000,000천원 ÷ 20,000세대 ÷ 10 = 25만원/세대/년.</p>
+  <p class="panel-note"><strong>보험료 포함 모형의 자료 가용성:</strong> <code>Statistics/인구/행정구역(시군구)별 주민등록세대수.csv</code>는 실제 원본 자료로 포함됐으며 연도·지역별 가구당 보험료를 계산합니다. 다만 세대수·보험료 결측 시 해당 관측치는 제외합니다. 2014년 서울·인천·경기·강원 보험료 원본은 집계 불일치로 제외합니다. 보험료 미포함 5변수 모형은 이용할 수 있습니다.</p>
+  <p class="panel-note">OLS의 <code>coef</code>는 X 1단위 증가당 Y의 예상 변화(%p), <code>std err</code>는 표준오차, <code>P&gt;|t|</code>는 양측 검정 p-값입니다. <code>R-squared</code>는 설명력이며 인과효과가 아닙니다. 전체 기간 통합은 지역별 반복 관측·연도효과를 보정하지 않습니다. <a href="quality.html#variable-units">자료 품질 페이지의 단위 안내</a>도 참고하세요.</p>
+</section>
 </main></div></body></html>
