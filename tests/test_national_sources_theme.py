@@ -81,3 +81,25 @@ def test_reproducibility_not_to_delete_source_folders():
                  "__pycache__", ".pytest_cache", "site/", "폴더 전체는 삭제하지",
                  "python build.py", "requirements.txt", ".github/"):
         assert term in text, term
+
+
+def test_disability_citations_trace_to_the_prior_17_regional_kosis_tables():
+    sources = (ROOT / "KOSIS_SOURCES.md").read_text(encoding="utf-8")
+    readme = (ROOT / "README.md").read_text(encoding="utf-8")
+    methods = (SITE / "quality.html").read_text(encoding="utf-8")
+    table_ids = (
+        "DT_201_00018_2014", "DT_1137", "DT_K2E001",
+        "DT_20402_K000042", "DT_20503_K001036",
+        "DT_20603_K001036", "DT_2071K36", "DT_20802N_200",
+        "DT_21002_K033", "DT_211002_K030", "DT_T28",
+        "DT_21303_K000086", "DT_214N_Z00026", "DT_K037",
+        "DT_21603_K001036", "DT_217003N_K036",
+        "DT_21802_K001036",
+    )
+    for table_id in table_ids:
+        assert table_id in sources, table_id
+    assert "ASD_FI_Correlation" in sources
+    assert "2023.04.20" in sources
+    assert "같은 KOSIS 표" in readme
+    assert "ASD_FI_Correlation" in methods
+    assert "2014–2022" in sources
