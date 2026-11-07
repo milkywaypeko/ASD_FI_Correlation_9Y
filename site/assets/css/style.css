@@ -28,3 +28,6 @@
 
 /* Keep model-specific statistics completely absent from six-variable views. */
 #u-slope-card[hidden],#u-corr-card[hidden],#u-trend-corr-wrap[hidden],#u-scipy-section[hidden],[data-simple-correlation][hidden]{display:none!important}
+
+#u-slope-p-card[hidden]{display:none!important}
+.kpi-value#u-slope-p{overflow-wrap:anywhere;font-variant-numeric:tabular-nums}
