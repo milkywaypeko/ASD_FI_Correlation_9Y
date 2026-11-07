@@ -118,7 +118,7 @@ KOSIS는 자료 제공 플랫폼이며 통계 생산기관(작성기관)과 다�
 | 합계출산율 | [국가데이터처, 인구동향조사, 합계출산율](https://kosis.kr/visual/nsportalStats/detailContents.do?listId=A&statJipyoId=3643&vStatJipyoId=4854) | 공식 지표 설명에서 확인, 시군구 CSV 원표 ID 미확인 |
 | 장애인 등록 | [보건복지부, 장애인현황, 「시도별, 장애유형별, 성별 등록장애인수」](https://kosis.kr/visual/nsportalStats/detailContents.do?listId=D&statJipyoId=3672&vStatJipyoId=4839) | 작성기관 및 표명 확인, 개별 시군구 원표 ID 미확인 |
 | 지역별 연령별 진료현황 | 국민건강보험공단, KOSIS에서 다운로드한 CSV | [KOSIS 통계목록](https://kosis.kr/statisticsList/statisticsListIndex.do?menuId=M_01&outLink=Y), 정확한 통계표 ID 미확인 |
-| 지역별 건강보험료 현황 | 국민건강보험공단, KOSIS에서 다운로드한 CSV | [KOSIS 통계목록](https://kosis.kr/statisticsList/statisticsListIndex.do?menuId=M_01&outLink=Y), 정확한 통계표 ID 미확인 |
+| 지역별 건강보험료 현황 | 국민건강보험공단, 「지역별 의료이용통계」, 「시군구별 보험료 현황」 | KOSIS 지역편 표 ID **TX_35003_A021**(수도권·강원), **TX_35003_A050**(충청권), **TX_35003_A079**(호남·제주) 확인. 영남권 ID 미확인. [상세 공식 링크](../KOSIS_SOURCES.md) |
 
 통계별 인용문 형식(작성기관, 조사명, 통계표명, 기간, 열람일, URL)과
 미확인 항목은 저장소 루트의 [`KOSIS_SOURCES.md`](../KOSIS_SOURCES.md)에
