@@ -4,6 +4,15 @@
   const $ = id => document.getElementById(id);
   const parse = x => x === null || x === undefined || !Number.isFinite(Number(x)) ? null : Number(x);
   const fmt = (x, digits = 6) => parse(x) === null ? '—' : Number(x).toLocaleString('ko-KR', {maximumFractionDigits: digits});
+  // Preserve nonzero p-values that would round to 0 at the chosen decimal precision.
+  // A stored numeric 0 cannot be recovered: it may already have underflowed upstream.
+  const fmtP = (x, digits = 9) => {
+    const p = parse(x);
+    if (p === null) return '—';
+    if (p === 0) return '0 (정밀도 한계 가능)';
+    if (Math.abs(p) < 10 ** (-digits)) return p.toExponential(3);
+    return fmt(p, digits);
+  };
   const text = (id, value) => { $(id).textContent = String(value); };
   const opt = (element, value, label) => element.add(new Option(label, value));
   const cache = new Map();
@@ -61,7 +70,7 @@
   const isSimple = () => state.model !== 'six';
   function updateRegressionPresentation() {
     const simple = isSimple();
-    for (const id of ['u-slope-card','u-corr-card','u-trend-corr-wrap','u-scipy-section']) {
+    for (const id of ['u-slope-card','u-corr-card','u-slope-p-card','u-trend-corr-wrap','u-scipy-section']) {
       $(id).hidden = !simple;
     }
     document.querySelectorAll('[data-simple-correlation]').forEach(el => {el.hidden = !simple;});
@@ -152,8 +161,8 @@
       const tr = document.createElement('tr');
       const values = [label(field), fmt(c.coef, 10)];
       if (isSimple()) values.push(fmt(item?.correlations?.[i], 9));
-      values.push(fmt(c.p, 9));
-      if (isSimple()) values.push(fmt(item?.correlation_pvalues?.[i], 9));
+      values.push(fmtP(c.p, 9));
+      if (isSimple()) values.push(fmtP(item?.correlation_pvalues?.[i], 9));
       values.push(fmt(c.ci?.[0], 9), fmt(c.ci?.[1], 9));
       for (const value of values) {
         const td = document.createElement('td'); td.textContent = value; tr.appendChild(td);
@@ -233,7 +242,7 @@
       'SciPy 반환 객체: ' + (result.raw ?? '계산 불가'),
       '95% 신뢰구간 반환 객체: ' + (result.raw_confidence_interval ?? '계산 불가'),
       'statistic (r): ' + (result.statistic ?? 'null'),
-      'pvalue (two-sided): ' + (result.pvalue ?? 'null'),
+      'pvalue (two-sided): ' + fmtP(result.pvalue, 12),
       'confidence_interval(0.95): [' + (result.confidence_interval.low ?? 'null') +
         ', ' + (result.confidence_interval.high ?? 'null') + ']',
       'alternative: ' + result.alternative,
@@ -289,7 +298,7 @@
       const row = document.createElement('tr');
       for (const value of [
         label(field), fmt(item.correlations?.[i], 10),
-        fmt(scipy?.pvalue, 10),
+        fmtP(scipy?.pvalue, 10),
         fmt(scipy?.confidence_interval?.low, 10),
         fmt(scipy?.confidence_interval?.high, 10),
         scipy?.n ?? item.n,
@@ -333,6 +342,7 @@
       text('u-corr','—');
       text('u-corr-variable','');
       text('u-slope','—');
+      text('u-slope-p','—');
       text('u-slope-variable','');
       for (const id of ['u-intercept','u-r2','u-adjr2','u-pmodel','u-n','u-caption']) text(id,'—');
       $('u-detail-corr').replaceChildren();
@@ -349,10 +359,11 @@
       text('u-intercept',fmt(item.intercept));
       text('u-r2',fmt(item.r2));
       text('u-adjr2',fmt(item.adj_r2));
-      text('u-pmodel',fmt(item.p_model,9));
+      text('u-pmodel',fmtP(item.p_model,9));
       text('u-n',item.n);
       if (isSimple()) {
         text('u-slope',fmt(item.coefficients?.[0], 9));
+        text('u-slope-p',fmtP(item.pvalues?.[0], 9));
         text('u-slope-variable','· '+label(modelFields(item)[0]));
         text('u-corr',fmt(item.correlations?.[0], 9));
         text('u-corr-variable','· '+label(modelFields(item)[0]));
@@ -371,6 +382,8 @@
       $('u-scipy-export').disabled = true;
       text('u-corr','—');
       text('u-slope','—');
+      text('u-slope-p','—');
+      text('u-pmodel','—');
       $('u-detail-corr').replaceChildren();
     }
   }
@@ -465,7 +478,9 @@
           if(column.key.startsWith('corr'))value=item.correlations?.[Number(column.key.slice(4))];
           if(column.key.startsWith('rp'))value=item.correlation_pvalues?.[Number(column.key.slice(2))];
           if(/^p\d+$/.test(column.key))value=item.pvalues[Number(column.key.slice(1))];
-          td.textContent=typeof value==='number'?fmt(value,8):String(value??'—');
+          td.textContent=typeof value==='number' ?
+             ((column.key==='p_model' || column.key.startsWith('rp') || /^p\\d+$/.test(column.key))
+               ? fmtP(value, 8) : fmt(value, 8)) : String(value??'—');
         }
         row.append(td);
       });body.append(row);
@@ -511,7 +526,8 @@
           scales:{x:{type:'linear',min:spec().years[0],max:spec().years.at(-1),
             ticks:{stepSize:1},title:{display:true,text:'연도'}},
             y:{title:{display:true,text:title}}},
-          plugins:{tooltip:{callbacks:{label:c=>'실제 값: '+fmt(c.raw.y,10)}}}}
+          plugins:{tooltip:{callbacks:{label:c=>'실제 값: '+
+             (id==='pcoef' || id==='pmodel' ? fmtP(c.raw.y,10) : fmt(c.raw.y,10))}}}}
       });
       trendCharts.push(instance);
     }
