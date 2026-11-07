@@ -5,6 +5,7 @@
 <link rel="stylesheet" href="assets/css/style.css">
 <link rel="stylesheet" href="assets/css/unified.css">
 <script defer src="https://cdn.jsdelivr.net/npm/chart.js@4.4.8/dist/chart.umd.min.js"></script>
+<script defer src="assets/js/chart-theme.js"></script>
 <script defer src="assets/js/unified.js"></script>
 <script defer src="assets/js/sidebar.js"></script>
 </head><body>
@@ -49,10 +50,11 @@
 <section class="panel"><p>행의 「Raw·관측치」를 선택하면 해당 모형의 statsmodels 출력과 실제 관측자료를 아래에서 확인할 수 있습니다.</p>
 <div class="u-index-controls">
 <label>연도·지역·장애유형 검색<input type="search" id="u-search" placeholder="연도, 지역, 장애유형"></label>
-<label>표 분석 단위<select id="u-index-scope"><option value="all">전체 분석 단위</option><option value="municipal">기초지자체 간 비교</option><option value="provincial">광역지자체 간 비교</option><option value="local_history">기초지자체 시계열</option></select></label>
+<label>표 분석 단위<select id="u-index-scope"><option value="all">전체 분석 단위</option><option value="national_municipal">전국 기초지자체 통합 OLS만</option><option value="municipal">기초지자체 간 비교 (전국·광역별)</option><option value="provincial">광역지자체 간 비교</option><option value="local_history">기초지자체 시계열</option></select></label>
 <label><input type="checkbox" id="u-all-types"> 전체 장애유형 결과 함께 비교</label>
 <label><input type="checkbox" id="u-all-regions"> 모든 광역지자체 결과 포함</label>
 <button class="outline-button" id="u-index-export">검색 결과 CSV 저장</button></div>
+<p class="panel-note" id="u-index-definition" aria-live="polite">전국 기초지자체 통합 OLS는 광역별로 나누지 않고, 한 연도의 모든 기초지자체 유효 관측치를 합쳐 하나의 statsmodels OLS를 적합한 결과입니다.</p>
 <div class="u-table-wrap"><table id="u-index-table"><thead id="u-index-head"></thead><tbody id="u-index-body"></tbody></table></div>
 <div class="u-pager"><span id="u-index-count">—</span><button id="u-prev" class="pager">이전</button><button id="u-next" class="pager">다음</button></div></section>
 <section class="panel"><div class="panel-title-row"><div><h2>선택 모형 · Raw·관측치</h2><p class="subtle" id="u-detail-title">비교표 행을 선택하세요.</p></div><button class="outline-button" id="u-observation-export" disabled>관측치 CSV 저장</button></div>
@@ -73,4 +75,10 @@
 <p>진료비는 개인의 실제 본인부담액이나 모든 비급여를 포함한 의료비가 아닙니다. 가구당 건강보험료는 지역 총보험료를 주민등록세대수로 나눈 환산치이지, 가구별 고지액의 단순평균이 아닙니다. 건강보험료는 1인당으로 환산하지 않습니다.</p>
 <p>지역 단위 OLS는 통계적 연관성이지 인과관계가 아닙니다. 단순회귀 계수는 통제변수 없이 X의 1단위 증가와 연결된 등록률 변화(%p)를, 6변수 다중회귀 계수는 다른 다섯 X를 고정할 때의 변화(%p)를 뜻합니다. 서로 다른 단위의 계수 크기를 직접 비교하지 마세요. 인구구조·진료비·보험료·재정자립도 사이의 다중공선성, 건강비용과 지역의 질병부담 간 역방향 관계, 연도 통합 OLS의 지자체 반복관측·연도효과 미통제, 결측·행정구역 개편·집계 기준 차이 및 표본 수 변화를 고려해야 합니다.</p>
 <p>경기도 2014~2017년의 「청각·언어」 통합 등록인원은 청각·언어 각 유형에 임의 배분하거나 결측을 0으로 채우지 않습니다. 모든 불가한 회귀는 추정 실패 이유를 표시합니다. <a href="quality.html">품질 감사</a> · <a href="../README.md">연구 README</a></p></section>
-</main></div></body></html>
+<section class="panel" id="repro-source-guide"><div class="eyebrow">06 / SOURCES & REPRODUCIBILITY</div>
+<h2>KOSIS 통계 출처·재현성 점검</h2>
+<p>이 연구의 원본 CSV는 모두 KOSIS 국가통계포털에서 취득한 통계입니다. 작성기관은 행정안전부(주민등록·재정), 각 시도별 기본통계 작성기관(장애인 등록통계), 국가데이터처(출산율), 국민건강보험공단(진료비·보험료) 등으로 구분합니다. 장애인 원본 17개는 이전 ASD_FI_Correlation 연구에 사용한 같은 KOSIS 표에서 연도 범위만 2014–2022년으로 바꿔 추출한 자료입니다. 상세 표 ID를 확인하지 못한 경우는 임의 출처를 만들지 않습니다. 출처 정보 열람일은 2026.11.08이며 실제 CSV 다운로드 날짜와 구분됩니다.</p>
+<p>장애인등록 CSV의 KOSIS 개별 17개 통계표 링크는 <a href="https://github.com/milkywaypeko/ASD_FI_Correlation/blob/main/README.md#link">기존 연구의 출처 기록</a>에서 확인할 수 있습니다. 기존 연구의 출처 기록일 2023.04.20과 이번 자료의 다운로드 시점은 구분됩니다.</p>
+<p><a href="https://kosis.kr/statisticsList/statisticsListIndex.do?menuId=M_01&amp;outLink=Y">KOSIS 공식 통계목록</a> · <a href="https://stat.kosis.kr/nsistN/kosisUseGuide.do">KOSIS 출처 표기 기준</a> · <a href="quality.html#source-reproducibility">통계별 공식 출처·재현 가능 파일 안내</a></p>
+<p><strong>보존 필수:</strong> Statistics/ CSV 전체와 분석 Python 코드, HTML/CSS/JS, tests/. <strong>빌드로 복원 가능:</strong> site/data/, site/raw/, __pycache__/, .pytest_cache/, 루트 index.html 및 .nojekyll. site/ 폴더 전체는 삭제하지 마세요. 생성 산출물 삭제 후에는 반드시 <code>python build.py</code>를 실행한 뒤 배포해야 합니다.</p>
+</section></main></div></body></html>

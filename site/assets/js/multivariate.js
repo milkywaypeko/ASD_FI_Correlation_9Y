@@ -112,9 +112,9 @@
     ]:[];
     Lab.setChart(chartId,{type:'scatter',data:{datasets:[
       {label:'실제 등록률 관측치',data:pts,pointRadius:state.allYears?3:4,
-       pointHoverRadius:7,pointBackgroundColor:'rgba(33,140,136,.58)',backgroundColor:'rgba(33,140,136,.58)',borderColor:'#fff',pointBorderWidth:.5},
+       pointHoverRadius:7,pointBackgroundColor:window.ResearchChartTheme.palette.observationFill,backgroundColor:window.ResearchChartTheme.palette.observationFill,borderColor:'#fff',pointBorderWidth:.5},
       {type:'line',label:'조건부 예측선',data:line,pointRadius:0,borderWidth:2.8,
-       borderColor:'#e59a5c',backgroundColor:'#e59a5c',order:0}
+       borderColor:window.ResearchChartTheme.palette.prediction,backgroundColor:window.ResearchChartTheme.palette.prediction,order:0}
     ]},options:{responsive:true,maintainAspectRatio:false,animation:false,interaction:{intersect:true,mode:'nearest'},
       plugins:{legend:{display:false},tooltip:{callbacks:{
         title:items=>items[0]?.raw?.province?`${items[0].raw.province} · ${items[0].raw.district}`:'다중회귀 조건부 예측선',
@@ -124,8 +124,8 @@
             `재정자립도: ${fmt(r.fiscal,4)} (0~1)`,`합계출산율: ${fmt(r.fertility,3)}명`,
             `다중회귀 예측값: ${fmt(r.predicted,6)}%`];}
       }}},
-      scales:{x:{type:'linear',title:{display:true,text:isFiscal?'재정자립도 (0~1)':'합계출산율 (명/여성)',color:'#637386'},grid:{color:'#edf0f4'},ticks:{color:'#8091a3'}},
-              y:{title:{display:true,text:'실제 장애유형별 등록률 (%)',color:'#637386'},grid:{color:'#edf0f4'},ticks:{color:'#8091a3'}}}}
+      scales:{x:{type:'linear',title:{display:true,text:isFiscal?'재정자립도 (0~1)':'합계출산율 (명/여성)',color:window.ResearchChartTheme.palette.text},grid:{color:window.ResearchChartTheme.palette.grid},ticks:{color:window.ResearchChartTheme.palette.text}},
+              y:{title:{display:true,text:'실제 장애유형별 등록률 (%)',color:window.ResearchChartTheme.palette.text},grid:{color:window.ResearchChartTheme.palette.grid},ticks:{color:window.ResearchChartTheme.palette.text}}}}
     });
   }
   function trends(){

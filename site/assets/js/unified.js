@@ -140,8 +140,8 @@
     return new Chart(canvas, {type:'scatter', data:{datasets:data}, options:{
       responsive:true,maintainAspectRatio:false,
       parsing:false,
-      scales:{x:{type:'linear',title:{display:true,text:xLabel}},
-              y:{title:{display:true,text:yLabel}}},
+      scales:{x:{type:'linear',...window.ResearchChartTheme.axis(xLabel)},
+              y:window.ResearchChartTheme.axis(yLabel)},
       plugins:{tooltip:{callbacks:{label:context => {
         const r = context.raw;
         return (r.place ? r.place + ' · ' : '') + fmt(r.x, 5) + ' / ' + fmt(r.y, 5);
@@ -178,10 +178,10 @@
       const low = Math.min(...xs), high = Math.max(...xs);
       const condition = predictors.length > 1;
       const datasets = [
-        {label:'실제 등록률(%)',data:points,backgroundColor:'rgba(32,104,158,.65)',pointRadius:3.1},
+        {label:'실제 등록률(%)',data:points,backgroundColor:window.ResearchChartTheme.palette.observationFill,pointRadius:window.ResearchChartTheme.scatter.pointRadius},
         {type:'line',label:condition?'나머지 다섯 변수 평균 고정 조건부 예측선':'단순 OLS 예측선',
          data:[{x:low,y:baseline + coefficient*low},{x:high,y:baseline + coefficient*high}],
-         borderColor:'#bd6738',borderWidth:2,pointRadius:0}
+         borderColor:window.ResearchChartTheme.palette.prediction,borderWidth:window.ResearchChartTheme.fit.borderWidth,pointRadius:0}
       ];
       const instance = graph(canvas,datasets,label(field),item.type+' 등록률(%)');
       if(instance) charts.push(instance);
@@ -247,9 +247,18 @@
     }
   }
   function scoped(item) {
-    if (state.indexScope!=='all' && item.scope!==state.indexScope) return false;
+    // This is ONE OLS per year / disability / fiscal mode fitted over all
+    // complete-case basic municipalities nationwide. Never mix it up with
+    // 17 separate metropolitan OLS fits or local time-series regressions.
+    const nationwide = state.indexScope === 'national_municipal';
+    if (nationwide) {
+      if (item.scope !== 'municipal' || item.region !== '전국') return false;
+    } else if (state.indexScope !== 'all' && item.scope !== state.indexScope) {
+      return false;
+    }
     if (!state.allTypes && item.type!==state.dtype) return false;
-    if (!state.allRegions && state.province!=='전국' &&
+    // Province restrictions must not exclude nationwide rows in the preset.
+    if (!nationwide && !state.allRegions && state.province!=='전국' &&
         !item.region.includes(state.province) && item.region!=='전국') return false;
     if (spec().fiscal && item.mode!==state.fiscal) return false;
     const q=state.search.trim().toLocaleLowerCase();
@@ -278,6 +287,10 @@
   const col = (key,label,sortable=true) => ({key,label,sortable});
   function drawIndex() {
     order();
+    const national = state.indexScope === 'national_municipal';
+    text('u-index-definition', national
+      ? '전국 기초지자체 전체를 하나의 표본으로 합친 OLS만 표시합니다. 행마다 연도(또는 전체기간) × 장애유형 × 재정자립도 기준별 1개 모형이며, 표본 n은 해당 조건에서 실제 사용된 기초지자체·연도 관측치 수입니다. 광역별 회귀나 기초지자체 개별 시계열은 포함하지 않습니다. 검색·정렬·CSV·Raw·관측치도 이 결과만 따릅니다.'
+      : '표 분석 단위에 따라 전국·광역별 기초지자체 횡단면 OLS, 광역지자체 간 OLS, 기초지자체 시계열 OLS를 구분합니다. 전국 기초지자체 통합 OLS만 보려면 위 선택기를 변경하세요.');
     const columns=[
       col('year','시점'),col('type','장애유형'),col('scope','분석 단위'),
       col('region','광역/기초'),col('n','표본 n'),
@@ -341,8 +354,8 @@
       const val = item && valid(item) ? metric(item) : null;
       return {x:year,y:parse(val)};
     });
-    return [{label:'연도별 OLS',data:points,borderColor:'#226b97',
-      backgroundColor:'#226b97',spanGaps:false,tension:0.15,pointRadius:3}];
+    return [{label:'연도별 OLS',data:points,borderColor:window.ResearchChartTheme.palette.series,
+      backgroundColor:window.ResearchChartTheme.palette.series,spanGaps:false,tension:0.15,pointRadius:window.ResearchChartTheme.trend.pointRadius}];
   }
   function drawTrends() {
     clearCharts(trendCharts);

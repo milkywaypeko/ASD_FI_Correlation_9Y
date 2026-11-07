@@ -64,7 +64,7 @@ Statistics/
 | `인구/행정구역(시군구)별 주민등록세대수.csv` | 행정안전부 주민등록 세대통계 | 2014~2022 | 세대, 건강보험료 가구당 환산의 분모 |
 | `재정/Financial Independence.csv` | 지방재정 재정자립도, 개편 전·후 세입과목 분리 | 2014~2022 | 0~100%, Python 분석 내부에서 100으로 나눠 0~1 사용 |
 | `출산율/Birth rate.csv` | KOSIS 합계출산율, 지자체별 공식 출산율 | 2014~2022 | 명/여성, 공식 합계출산율을 단독 설명변수로 사용 |
-| `장애인등록/Disability/` 17개 CSV | 보건복지부·KOSIS 시도별 장애인 등록 통계 | 2014~2022 | 등록인원 명; 유형 등록인원 ÷ 같은 연도·지역 주민등록인구 × 100 = 등록률(%) |
+| `장애인등록/Disability/` 17개 CSV | 각 시도 「○○기본통계」의 장애인 등록 통계표, KOSIS (이전 연구와 동일 표의 연도 확장) | 2014~2022 | 등록인원 명; 유형 등록인원 ÷ 같은 연도·지역 주민등록인구 × 100 = 등록률(%) |
 | `국가건강정보/진료비/` 4개 CSV | 국민건강보험공단 지역·연령별 진료현황, 전체 연령 진료비 합계 | 원본 2014~2022, 회귀 2015~2022 | 총진료비 천원 ÷ 주민등록연앙인구 ÷ 10 = **만원/인/년** |
 | `국가건강정보/보험료/` 4개 CSV | 국민건강보험공단 지역별 건강보험료 현황, 전체 합계 | 원본 2014~2022, 회귀 2015~2022 | 연간 총건강보험료 천원 ÷ 주민등록세대수 ÷ 10 = **만원/세대/년** |
 
@@ -101,3 +101,32 @@ Statistics/
 - 지방재정365: https://www.lofin365.go.kr/
 - 국민건강보험공단 통계: https://www.nhis.or.kr/
 - 보건복지부: https://www.mohw.go.kr/
+
+## KOSIS 통계표 및 인용문 등록부 (2026.11.08 열람)
+
+이 연구에 사용한 **모든 통계 CSV는 KOSIS 국가통계포털에서 수집**했습니다.
+KOSIS는 자료 제공 플랫폼이며 통계 생산기관(작성기관)과 다릅니다.
+원본 CSV의 고유 다운로드 날짜 또는 `tblId`가 기록되지 않은 자료는
+표 ID를 임의로 만들지 않습니다.
+
+| 자료 | KOSIS 공식 출처 안내 / 작성기관 | 표 링크의 확인 범위 |
+| --- | --- | --- |
+| 주민등록인구 | [행정안전부, 주민등록인구현황, 「행정구역(시군구)별, 성별 인구수」](https://kosis.kr/visual/nsportalStats/detailContents.do?listId=A&statJipyoId=3647&vStatJipyoId=4887) | 공식 지표 설명에서 확인 |
+| 5세별 주민등록연앙인구 | [행정안전부, 「시군구/성/연령(5세)별 주민등록연앙인구」](https://kosis.kr/statisticsList/mass/mass_list.jsp?list_id=&org_id=101&process=statHtml&tbl_id=DT_1B040M5&vw_cd=MT_Z) | 공식 표 ID 101/DT_1B040M5 및 2014–2022 확인 |
+| 주민등록세대수 | [행정안전부, 주민등록인구현황, 「행정구역(시군구)별 주민등록세대수」](https://kosis.kr/visual/nsportalStats/detailContents.do?listId=A&statJipyoId=3639&vStatJipyoId=4852) | 공식 지표 설명에서 확인 |
+| 재정자립도 | [행정안전부, 지방재정365, 재정자립도](https://kosis.kr/metroindex/detailMetroIdct.do?graphTy=L&idctId=5&page=all) | 2014년 세입과목 개편과 지표 산식 확인, 다운로드 표 ID 미확인 |
+| 합계출산율 | [국가데이터처, 인구동향조사, 합계출산율](https://kosis.kr/visual/nsportalStats/detailContents.do?listId=A&statJipyoId=3643&vStatJipyoId=4854) | 공식 지표 설명에서 확인, 시군구 CSV 원표 ID 미확인 |
+| 장애인 등록 | 시도별 작성기관 「○○기본통계」 장애인 등록 현황 (KOSIS, 17개 표) | [기존 연구 저장소](https://github.com/milkywaypeko/ASD_FI_Correlation)의 2023.04.20 출처 기록에서 **시도별 17개 orgId·tblId 직접 URL** 확인. [전체 링크](../KOSIS_SOURCES.md) |
+| 지역별 연령별 진료현황 | 국민건강보험공단, KOSIS에서 다운로드한 CSV | [KOSIS 통계목록](https://kosis.kr/statisticsList/statisticsListIndex.do?menuId=M_01&outLink=Y), 정확한 통계표 ID 미확인 |
+| 지역별 건강보험료 현황 | 국민건강보험공단, 「지역별 의료이용통계」, 「시군구별 보험료 현황」 | KOSIS 지역편 표 ID **TX_35003_A021**(수도권·강원), **TX_35003_A050**(충청권), **TX_35003_A079**(호남·제주) 확인. 영남권 ID 미확인. [상세 공식 링크](../KOSIS_SOURCES.md) |
+
+통계별 인용문 형식(작성기관, 조사명, 통계표명, 기간, 열람일, URL)과
+미확인 항목은 저장소 루트의 [`KOSIS_SOURCES.md`](../KOSIS_SOURCES.md)에
+정리했습니다. 안전한 재현성 삭제 기준은
+[`REPRODUCIBILITY.md`](../REPRODUCIBILITY.md)를 참고하세요.
+
+
+### 장애인 등록통계 원본의 연도 확장 이력
+
+이번 17개 CSV의 **KOSIS 시도별 기본통계 표는 과거 [ASD_FI_Correlation](https://github.com/milkywaypeko/ASD_FI_Correlation)에서 사용한 원표와 동일**합니다. 이전 연구에는 2016·2019·2020년 등 시도별 특정 연도만 정리돼 있었지만 본 연구는 **2014~2022년** 연도 열을 사용합니다. 17개 시도의 개별 원본 URL 및 표 ID는 [KOSIS 출처 등록부](../KOSIS_SOURCES.md)에 재수록했습니다. 서울 종로구(2019, 지체 2,661명), 인천 중구(2016, 지체 2,912명), 경기 수원시(2019, 지체 20,258명), 부산 중구(2020, 지체 1,173명)의 값이 기존 단일연도 파일과 다년 파일에서 일치함을 대조했습니다. **전체 지자체·장애유형 값을 전수 검증했다는 뜻은 아닙니다.**
+
