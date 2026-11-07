@@ -101,3 +101,26 @@ Statistics/
 - 지방재정365: https://www.lofin365.go.kr/
 - 국민건강보험공단 통계: https://www.nhis.or.kr/
 - 보건복지부: https://www.mohw.go.kr/
+
+## KOSIS 통계표 및 인용문 등록부 (2026.11.08 열람)
+
+이 연구에 사용한 **모든 통계 CSV는 KOSIS 국가통계포털에서 수집**했습니다.
+KOSIS는 자료 제공 플랫폼이며 통계 생산기관(작성기관)과 다릅니다.
+원본 CSV의 고유 다운로드 날짜 또는 `tblId`가 기록되지 않은 자료는
+표 ID를 임의로 만들지 않습니다.
+
+| 자료 | KOSIS 공식 출처 안내 / 작성기관 | 표 링크의 확인 범위 |
+| --- | --- | --- |
+| 주민등록인구 | [행정안전부, 주민등록인구현황, 「행정구역(시군구)별, 성별 인구수」](https://kosis.kr/visual/nsportalStats/detailContents.do?listId=A&statJipyoId=3647&vStatJipyoId=4887) | 공식 지표 설명에서 확인 |
+| 5세별 주민등록연앙인구 | [행정안전부, 「시군구/성/연령(5세)별 주민등록연앙인구」](https://kosis.kr/statisticsList/mass/mass_list.jsp?list_id=&org_id=101&process=statHtml&tbl_id=DT_1B040M5&vw_cd=MT_Z) | 공식 표 ID 101/DT_1B040M5 및 2014–2022 확인 |
+| 주민등록세대수 | [행정안전부, 주민등록인구현황, 「행정구역(시군구)별 주민등록세대수」](https://kosis.kr/visual/nsportalStats/detailContents.do?listId=A&statJipyoId=3639&vStatJipyoId=4852) | 공식 지표 설명에서 확인 |
+| 재정자립도 | [행정안전부, 지방재정365, 재정자립도](https://kosis.kr/metroindex/detailMetroIdct.do?graphTy=L&idctId=5&page=all) | 2014년 세입과목 개편과 지표 산식 확인, 다운로드 표 ID 미확인 |
+| 합계출산율 | [국가데이터처, 인구동향조사, 합계출산율](https://kosis.kr/visual/nsportalStats/detailContents.do?listId=A&statJipyoId=3643&vStatJipyoId=4854) | 공식 지표 설명에서 확인, 시군구 CSV 원표 ID 미확인 |
+| 장애인 등록 | [보건복지부, 장애인현황, 「시도별, 장애유형별, 성별 등록장애인수」](https://kosis.kr/visual/nsportalStats/detailContents.do?listId=D&statJipyoId=3672&vStatJipyoId=4839) | 작성기관 및 표명 확인, 개별 시군구 원표 ID 미확인 |
+| 지역별 연령별 진료현황 | 국민건강보험공단, KOSIS에서 다운로드한 CSV | [KOSIS 통계목록](https://kosis.kr/statisticsList/statisticsListIndex.do?menuId=M_01&outLink=Y), 정확한 통계표 ID 미확인 |
+| 지역별 건강보험료 현황 | 국민건강보험공단, KOSIS에서 다운로드한 CSV | [KOSIS 통계목록](https://kosis.kr/statisticsList/statisticsListIndex.do?menuId=M_01&outLink=Y), 정확한 통계표 ID 미확인 |
+
+통계별 인용문 형식(작성기관, 조사명, 통계표명, 기간, 열람일, URL)과
+미확인 항목은 저장소 루트의 [`KOSIS_SOURCES.md`](../KOSIS_SOURCES.md)에
+정리했습니다. 안전한 재현성 삭제 기준은
+[`REPRODUCIBILITY.md`](../REPRODUCIBILITY.md)를 참고하세요.
