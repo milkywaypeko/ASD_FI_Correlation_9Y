@@ -69,6 +69,27 @@ def _complete_cases(rows, dtype, fields):
     ]
 
 
+
+def _pearson_correlation(xs, ys):
+    """Pearson r on the *same* model complete cases; undefined => None.
+
+    Unweighted descriptive correlation, not a multivariate/partial
+    regression coefficient. Never fill missing values or hide zero variance.
+    """
+    if len(xs) < 2:
+        return None
+    mean_x = math.fsum(xs) / len(xs)
+    mean_y = math.fsum(ys) / len(ys)
+    dx = [x - mean_x for x in xs]
+    dy = [y - mean_y for y in ys]
+    sx = math.fsum(a * a for a in dx)
+    sy = math.fsum(b * b for b in dy)
+    if sx <= 0.0 or sy <= 0.0:
+        return None
+    value = math.fsum(a * b for a, b in zip(dx, dy)) / math.sqrt(sx * sy)
+    return max(-1.0, min(1.0, value)) if math.isfinite(value) else None
+
+
 def _fit(rows, dtype, fields, scope, region, period, fiscal_mode):
     # Provincial disability totals are valid only if every component locality
     # reported that type. Unreported categories must never become zero.
@@ -80,6 +101,15 @@ def _fit(rows, dtype, fields, scope, region, period, fiscal_mode):
     )
     if model["n"] != len(complete):
         raise AssertionError("OLS complete-case count does not match audit rows")
+    # Marginal X-Y Pearson r for each predictor, evaluated on exactly the
+    # same complete cases as the corresponding six-variable or simple OLS.
+    # These are NOT partial correlations and are not inferred from R².
+    y_values = [float(row["rates"][dtype]) for row in complete]
+    correlations = [
+        _pearson_correlation(
+            [float(row[field]) for row in complete], y_values
+        ) for field in fields
+    ]
     observations = []
     for row in complete:
         actual = float(row["rates"][dtype])
@@ -100,10 +130,16 @@ def _fit(rows, dtype, fields, scope, region, period, fiscal_mode):
         "adj_r2": model["adj_r2"], "p_model": model["p_model"],
         "coefficients": [model["coefficients"].get(f, {}).get("coef") for f in fields],
         "pvalues": [model["coefficients"].get(f, {}).get("p") for f in fields],
+        "correlations": correlations,
         "warning": model["warning"],
     }
     detail = {
         "model": model,
+        "correlations": {
+            "method": "pearson",
+            "sample_n": len(complete),
+            "predictors": dict(zip(fields, correlations)),
+        },
         "columns": ["year", "province", "district", "registered_rate_percent",
                     *fields, "prediction_percent", "residual_percentage_points"],
         "observations": observations,
@@ -111,6 +147,7 @@ def _fit(rows, dtype, fields, scope, region, period, fiscal_mode):
             "outcome": "해당 장애유형 등록인원 ÷ 해당 연도·지역 주민등록인구 × 100 (%)",
             "prediction": "동일 statsmodels OLS 모형으로 계산한 관측치별 적합값",
             "inference": "통계적 연관성만 분석하며 인과관계를 입증하지 않습니다.",
+            "correlation": "피어슨 r은 모형에 사용된 동일 완전관측치의 Y와 각 X 간 비가중 이변량 상관계수입니다. 다른 X를 통제한 편상관이나 다중회귀 β가 아닙니다. n<2 또는 어느 변수든 분산이 0이면 null로 기록합니다.",
         },
     }
     return record, detail
@@ -194,6 +231,9 @@ def build_unified_analysis(out: Path, detail: list[dict],
             for key, cfg in SPECS.items()
         },
         "limitations": [
+            "피어슨 r은 동일 완전관측치에서 계산된 각 X와 등록률 Y의 이변량 상관이며, 다중회귀 β 또는 편상관이 아닙니다.",
+            "r의 절댓값이 1에 가까우면 선형 연관성이 크지만 인과관계를 입증하지 않습니다.",
+            "상수열이나 표본 부족으로 계산되지 않는 r은 결측으로 기록하며 0으로 대체하지 않습니다.",
             "지역별 회귀계수는 통계적 연관성이며 인과효과가 아닙니다.",
             "단순회귀는 다른 변수를 통제하지 않으며, 다중회귀 계수는 다른 다섯 변수를 일정하게 둔 조건부 연관성입니다.",
             "연도 통합 OLS는 지자체 반복관측과 연도효과를 따로 통제하지 않습니다.",
