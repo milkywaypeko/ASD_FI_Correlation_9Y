@@ -92,6 +92,7 @@ Python과 `requirements.txt`에 명시된 라이브러리가 준비된 환경에
 
 ```bash
 python -m pip install -r requirements.txt
+python -m pip install pytest  # 테스트용 도구(분석 필수 의존성에는 포함되지 않음)
 python -m pytest tests -q
 python build.py
 python -m http.server 8000
