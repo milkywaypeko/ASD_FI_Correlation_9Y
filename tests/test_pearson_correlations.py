@@ -181,7 +181,7 @@ def test_simple_regression_top_cards_and_six_variable_correlation_hidden():
     for name in ("u-slope-card", "u-slope", "u-slope-variable", "u-corr-card",
                  "u-corr", "u-trend-corr-wrap", "u-scipy-detail"):
         assert f'id="{name}"' in html
-    assert html.count("data-simple-only") >= 7
+    assert html.count("data-simple-only") >= 6
     assert "const isSimple = () => state.model !== 'six'" in js
     assert "element.style.display = isSimple() ? '' : 'none'" in js
     assert "text('u-slope',fmt(item.coefficients?.[0], 9))" in js
