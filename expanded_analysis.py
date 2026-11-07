@@ -490,23 +490,18 @@ def build_expanded_analysis(stats: Path, out: Path, detail: list[dict],
             for r in detail if any(r.get(field) is None for field in checks)
         ][:100],
     }
-    audit["multi"] = _emit_models(out, "demographic_multi_models", detail, province_rows,
-                                  ("age65_percent", "under15_percent", "fertility", MEDICAL), True)
+    # Legacy five-variable and duplicate six-variable generations are retired.
+    # The seven current models (all disability types) share unified_analysis.py.
     for label, field in SIMPLE.items():
         audit[label] = _emit_models(out, f"{label}_ols_models", detail, province_rows, (field,), False)
-    audit["household_premium_multi"] = _emit_models(
-        out, "household_premium_multi_models", detail, province_rows,
-        ("age65_percent", "under15_percent", "fertility", MEDICAL, PREMIUM_FIELD), True)
     audit["household_premium_ols"] = _emit_models(
-        out, "household_premium_ols_models", detail, province_rows, (PREMIUM_FIELD,), False)
-    if len(disability_types) > 1:
-        audit["disability_type_regressions"] = _emit_disability_type_models(
-            out, detail, province_rows, disability_types)
-        audit["type_regression_note"] = (
-            "청각·언어는 경기도 2014~2017년 통합 집계만 사용; "
-            "청각/언어로 분리하거나 결측을 0으로 대체하지 않음. "
-            "광역 장애유형별 등록률은 하위 지역의 모든 유형 자료가 있는 경우만 사용.")
+        out, "household_premium_ols_models", detail, province_rows,
+        (PREMIUM_FIELD,), False)
+    audit["type_regression_note"] = (
+        "청각·언어는 경기도 2014~2017년 통합 집계만 사용; "
+        "청각/언어로 분리하거나 결측을 0으로 대체하지 않음. "
+        "광역 장애유형별 등록률은 모든 하위 지역의 유형 자료가 있을 때만 사용.")
     _write_json(out / "data" / "age_medical_quality.json", audit)
     print("인구구조·의료비 추가 분석:", json.dumps(
-        {key: audit[key] for key in ("municipal_by_variable", "municipal_complete_cases", "multi", "age65", "under15", "medical")}, ensure_ascii=False), flush=True)
+        {key: audit[key] for key in ("municipal_by_variable", "municipal_complete_cases", "age65", "under15", "medical")}, ensure_ascii=False), flush=True)
     return audit
