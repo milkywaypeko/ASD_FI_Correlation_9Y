@@ -75,6 +75,76 @@ class TestAgeMedicalRegressions(unittest.TestCase):
         singular = [dict(age65_percent=10,under15_percent=10,rates={"전체":j}) for j in range(10)]
         self.assertIsNotNone(fit_extended_ols(singular,("age65_percent","under15_percent"),"municipal","전국",2022)["warning"])
 
+    def test_disability_type_outcome_is_separate(self):
+        observations = [dict(age65_percent=float(i), rates={
+            "전체": 4 + 2 * i, "지체": 0.5 + 0.15 * i,
+        }) for i in range(1, 15)]
+        all_fit = fit_extended_ols(observations, ("age65_percent",),
+                                   "municipal", "전국", 2022)
+        type_fit = fit_extended_ols(observations, ("age65_percent",),
+                                    "municipal", "전국", 2022, dtype="지체",
+                                    full_summary=False)
+        self.assertAlmostEqual(all_fit["coefficients"]["age65_percent"]["coef"], 2)
+        self.assertAlmostEqual(type_fit["coefficients"]["age65_percent"]["coef"], .15)
+        self.assertEqual(type_fit["type"], "지체")
+        self.assertIn("지체", type_fit["raw"])
+
+    def test_type_missing_values_are_never_zero_filled(self):
+        observations = [dict(age65_percent=float(i), rates={
+            "전체": 2 * i, **({"청각": 0.05 * i} if i % 2 else {})
+        }) for i in range(1, 13)]
+        fitted = fit_extended_ols(observations, ("age65_percent",),
+                                  "municipal", "전국", 2022, dtype="청각")
+        self.assertEqual(fitted["n"], 6)
+        self.assertAlmostEqual(fitted["coefficients"]["age65_percent"]["coef"], .05)
+        none = fit_extended_ols(observations, ("age65_percent",),
+                                "municipal", "전국", 2022, dtype="청각·언어")
+        self.assertEqual(none["n"], 0)
+        self.assertIsNotNone(none["warning"])
+
+    def test_type_specific_model_files_use_expected_code_and_coverage(self):
+        from expanded_analysis import _emit_disability_type_models
+        detail = []
+        for i in range(12):
+            detail.append({"year":2022,"province":"서울특별시", "district":f"구{i}",
+                           "age65_percent":float(i), "under15_percent":float((i*7)%11),
+                           "fertility":0.7+i*.01, "medical_10k_per_person":12+i*.3,
+                           "after":.2+i*.01,"before":.3+i*.01,
+                           "rates":{"전체":3+i*.12,"지체":.02*i}})
+        provincial = [{"year":2022,"province":"서울특별시","district":"서울특별시",
+                       "age65_percent":19., "under15_percent":14.,"fertility":.8,
+                       "medical_10k_per_person":30.,"after":.4,"before":.3,
+                       "rates":{"전체":3.1,"지체":1.3},"complete_types":["전체"]}]
+        with tempfile.TemporaryDirectory() as tmp:
+            audit = _emit_disability_type_models(Path(tmp),detail,provincial,["전체","지체"])
+            self.assertIn("지체",audit)
+            self.assertNotIn("전체",audit)
+            expected = Path(tmp)/"data"/"age65_ols_models_type_01.json"
+            result = json.loads(expected.read_text(encoding="utf-8"))
+            self.assertEqual(result["type"],"지체")
+            national = next(m for m in result["models"] if
+                            m["year"] == 2022 and m["region"] == "전국"
+                            and m["scope"] == "municipal")
+            self.assertEqual(national["n"],12)
+            self.assertAlmostEqual(national["coefficients"]["age65_percent"]["coef"],.02)
+            province_ols = next(m for m in result["models"] if
+                            m["year"] == 2022 and m["scope"] == "provincial")
+            self.assertEqual(province_ols["n"],0)
+            self.assertIsNotNone(province_ols["warning"])
+
+    def test_type_filter_controls_every_page_and_csv(self):
+        script=(ROOT/"site"/"assets"/"js"/"age-medical.js").read_text(encoding="utf-8")
+        self.assertIn("r.rates[state.dtype]",script)
+        self.assertNotIn("r.rates['전체']",script)
+        self.assertIn("state.dtype",script)
+        self.assertIn("meta.types.forEach",script)
+        self.assertIn("_type_",script)
+        self.assertIn("r.complete_types.includes(state.dtype)",script)
+        for page in ("age-medical-multi.html","age65-ols.html","under15-ols.html","medical-ols.html"):
+            html=(ROOT/"site"/page).read_text(encoding="utf-8")
+            self.assertIn('id="an-type"',html)
+            self.assertIn('id="an-outcome"',html)
+
     def test_four_html_pages_exist(self):
         for page in ("age-medical-multi.html","age65-ols.html","under15-ols.html","medical-ols.html"):
             html=(ROOT/"site"/page).read_text(encoding="utf-8")
