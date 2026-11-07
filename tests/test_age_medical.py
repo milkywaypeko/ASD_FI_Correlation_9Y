@@ -147,7 +147,7 @@ class TestAgeMedicalRegressions(unittest.TestCase):
         self.assertIn("item.type === state.dtype",script)
         self.assertIn("state.allTypes",script)
         self.assertIn("item.shard",script)
-        self.assertIn("detail.observations.length !== item.n",script)
+        self.assertIn("result.observations.length !== item.n",script)
         self.assertIn("조건부 예측선",script)
         page=(ROOT/"site"/"unified.html").read_text(encoding="utf-8")
         for element in ("u-type","u-index-table","u-trend-coef","u-trend-intercept",
