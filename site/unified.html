@@ -77,7 +77,8 @@
 <p>경기도 2014~2017년의 「청각·언어」 통합 등록인원은 청각·언어 각 유형에 임의 배분하거나 결측을 0으로 채우지 않습니다. 모든 불가한 회귀는 추정 실패 이유를 표시합니다. <a href="quality.html">품질 감사</a> · <a href="../README.md">연구 README</a></p></section>
 <section class="panel" id="repro-source-guide"><div class="eyebrow">06 / SOURCES & REPRODUCIBILITY</div>
 <h2>KOSIS 통계 출처·재현성 점검</h2>
-<p>이 연구의 원본 CSV는 모두 KOSIS 국가통계포털에서 취득한 통계입니다. 작성기관은 행정안전부(주민등록·재정), 국가데이터처(출산율), 보건복지부(등록장애인), 국민건강보험공단(진료비·보험료) 등으로 구분합니다. 상세 표 ID를 확인하지 못한 경우는 임의 출처를 만들지 않습니다. 출처 정보 열람일은 2026.11.08이며 실제 CSV 다운로드 날짜와 구분됩니다.</p>
+<p>이 연구의 원본 CSV는 모두 KOSIS 국가통계포털에서 취득한 통계입니다. 작성기관은 행정안전부(주민등록·재정), 각 시도별 기본통계 작성기관(장애인 등록통계), 국가데이터처(출산율), 국민건강보험공단(진료비·보험료) 등으로 구분합니다. 장애인 원본 17개는 이전 ASD_FI_Correlation 연구에 사용한 같은 KOSIS 표에서 연도 범위만 2014–2022년으로 바꿔 추출한 자료입니다. 상세 표 ID를 확인하지 못한 경우는 임의 출처를 만들지 않습니다. 출처 정보 열람일은 2026.11.08이며 실제 CSV 다운로드 날짜와 구분됩니다.</p>
+<p>장애인등록 CSV의 KOSIS 개별 17개 통계표 링크는 <a href="https://github.com/milkywaypeko/ASD_FI_Correlation/blob/main/README.md#link">기존 연구의 출처 기록</a>에서 확인할 수 있습니다. 기존 연구의 출처 기록일 2023.04.20과 이번 자료의 다운로드 시점은 구분됩니다.</p>
 <p><a href="https://kosis.kr/statisticsList/statisticsListIndex.do?menuId=M_01&amp;outLink=Y">KOSIS 공식 통계목록</a> · <a href="https://stat.kosis.kr/nsistN/kosisUseGuide.do">KOSIS 출처 표기 기준</a> · <a href="quality.html#source-reproducibility">통계별 공식 출처·재현 가능 파일 안내</a></p>
 <p><strong>보존 필수:</strong> Statistics/ CSV 전체와 분석 Python 코드, HTML/CSS/JS, tests/. <strong>빌드로 복원 가능:</strong> site/data/, site/raw/, __pycache__/, .pytest_cache/, 루트 index.html 및 .nojekyll. site/ 폴더 전체는 삭제하지 마세요. 생성 산출물 삭제 후에는 반드시 <code>python build.py</code>를 실행한 뒤 배포해야 합니다.</p>
 </section></main></div></body></html>
