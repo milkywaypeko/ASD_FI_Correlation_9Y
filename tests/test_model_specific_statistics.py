@@ -34,7 +34,7 @@ def test_multivariable_ols_omits_correlation_ui_and_csv_columns():
     js = (SITE / "assets/js/unified.js").read_text(encoding="utf-8")
     assert "for (const [i, field] of modelFields(item).entries())" in js
     assert "if (isSimple()) values.push(fmt(item?.correlations?.[i], 9))" in js
-    assert "if (isSimple()) values.push(fmt(item?.correlation_pvalues?.[i], 9))" in js
+    assert "if (isSimple()) values.push(fmtP(item?.correlation_pvalues?.[i], 9))" in js
     assert "if (isSimple()) configs.push(['corr'" in js
     assert "if (isSimple()) modelFields(item).forEach" in js
     assert "...(isSimple()?[item.correlations?.[i]??null" in js
