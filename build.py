@@ -14,6 +14,7 @@ from pathlib import Path
 import numpy as np
 import statsmodels.api as sm
 from expanded_analysis import build_expanded_analysis
+from unified_analysis import build_unified_analysis
 
 YEARS = tuple(range(2014, 2023))
 MODES = ("before", "after")
@@ -732,6 +733,11 @@ def build(base: Path, out: Path):
     birth_ols_audit = build_birth_ols(out, detail, province_rows)
     fiscal_birth_audit = build_fiscal_birth_ols(out, detail, province_rows)
     expanded_audit = build_expanded_analysis(stats, out, detail, province_rows, TYPES)
+    unified_audit = build_unified_analysis(out, detail, province_rows, TYPES)
+    # Do not publish superseded five-variable or duplicate six-variable JSON.
+    for obsolete_prefix in ("demographic_multi_models_", "household_premium_multi_models_"):
+        for obsolete in (out / "data").glob(obsolete_prefix + "*.json"):
+            obsolete.unlink()
     write_json(out / "data" / "municipalities.json", detail)
     write_json(out / "data" / "provinces.json", province_rows)
 
@@ -751,6 +757,7 @@ def build(base: Path, out: Path):
                "special_note": "세종/제주는 광역합계 관측치를 기초 단일 관측치로 사용. 다른 시군구와 완전히 동일한 행정계층은 아님.",
                "multivariate": birth_audit, "birth_ols": birth_ols_audit,
                "fiscal_birth_ols": fiscal_birth_audit, "age_medical": expanded_audit,
+                "unified": unified_audit,
                "fiscal_unit_note": "원본 재정자립도(0~100)를 Python 빌드시 100으로 나눠 0~1로 계산하며 CSV 원본은 수정하지 않음.",
                "method_note": "단순 OLS(상수항 포함); 연도 통합분석은 반복 측정과 연도 교란을 보정하지 않으므로 인과관계로 해석하지 말 것."}
     write_json(out / "data" / "quality.json", quality)
