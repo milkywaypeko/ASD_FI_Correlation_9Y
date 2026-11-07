@@ -33,9 +33,10 @@
 <div class="kpi"><div class="kpi-label">Adjusted R² 수정 결정계수</div><div class="kpi-value" id="u-adjr2">—</div></div>
 <div class="kpi"><div class="kpi-label">F검정 모형 p값</div><div class="kpi-value" id="u-pmodel">—</div></div>
 <div class="kpi"><div class="kpi-label">표본 수 n</div><div class="kpi-value" id="u-n">—</div></div>
-<div class="kpi"><div class="kpi-label">피어슨 상관계수 r <span id="u-corr-variable"></span></div><div class="kpi-value" id="u-corr">—</div></div>
+<div class="kpi" id="u-slope-card" data-simple-only><div class="kpi-label">단순회귀 기울기 β₁ <span id="u-slope-variable"></span></div><div class="kpi-value" id="u-slope">—</div></div>
+<div class="kpi" id="u-corr-card" data-simple-only><div class="kpi-label">피어슨 상관계수 r <span id="u-corr-variable"></span></div><div class="kpi-value" id="u-corr">—</div></div>
 </section>
-<section class="panel"><h2>설명변수별 회귀계수 β와 SciPy 피어슨 상관계수 r</h2><p class="subtle">X가 1단위 증가할 때 등록률 Y의 예상 변화량은 %p입니다. 다중회귀의 계수 β는 나머지 변수를 일정하게 유지한 조건부 연관성입니다. <strong>피어슨 r은 동일 완전관측 표본의 Y와 각 X 사이의 이변량 선형 상관계수</strong>로, 다른 변수를 통제한 편상관이나 β가 아닙니다. 계산이 불가능한 r은 —로 표시합니다.</p><div class="u-table-wrap"><table><thead><tr><th>설명변수 / 단위</th><th>기울기 β</th><th>SciPy r (Y–X)</th><th>OLS β p값</th><th>SciPy r p값(양측)</th><th>OLS β 95% CI 하한</th><th>OLS β 95% CI 상한</th></tr></thead><tbody id="u-coefficients"></tbody></table></div><p id="u-warning" class="panel-note"></p></section>
+<section class="panel"><h2 id="u-coef-heading">설명변수별 회귀계수 β</h2><p class="subtle" id="u-coef-method">X가 1단위 증가할 때 등록률 Y의 예상 변화량은 %p입니다.</p><div class="u-table-wrap"><table><thead><tr><th>설명변수 / 단위</th><th>기울기 β</th><th data-simple-only>SciPy r (Y–X)</th><th>OLS β p값</th><th data-simple-only>SciPy r p값(양측)</th><th>OLS β 95% CI 하한</th><th>OLS β 95% CI 상한</th></tr></thead><tbody id="u-coefficients"></tbody></table></div><p id="u-warning" class="panel-note"></p></section>
 <section class="panel"><div class="panel-title-row"><div><div class="eyebrow">03 / OBSERVATIONS & CONDITIONAL FITS</div><h2>실제 장애유형별 등록률과 회귀 예측선</h2></div></div><p class="subtle">산점도 Y는 실제 등록률(%). 다중회귀선은 해당 X를 제외한 나머지 다섯 설명변수를 현재 완전관측 표본 평균으로 고정한 <strong>조건부 예측선</strong>이며 단순회귀선이 아닙니다.</p><div id="u-scatters" class="u-scatter-grid"></div><p id="u-scatter-status" class="panel-note"></p></section>
 <section class="panel"><div class="panel-title-row"><div><h2>연도별 회귀지표 추이</h2><p class="subtle">연도별 별도 회귀 결과입니다. 모형 추정이 불가능한 시점은 보간하지 않습니다. 피어슨 r은 같은 완전관측치에서 계산하며 OLS 추정 불가 시에도 계산 가능할 수 있습니다.</p></div><button class="outline-button" id="u-trend-export">추이 CSV 저장</button></div>
 <label>다중회귀 설명변수 계수/기울기 선택<select id="u-trend-var"></select></label>
@@ -46,7 +47,7 @@
 <div><h3>수정 R²</h3><canvas id="u-trend-adjr2"></canvas></div>
 <div><h3>기울기 p값</h3><canvas id="u-trend-pcoef"></canvas></div>
 <div><h3>F검정 모형 p값</h3><canvas id="u-trend-pmodel"></canvas></div>
-<div><h3>피어슨 상관계수 r (선택한 X–Y)</h3><canvas id="u-trend-corr"></canvas></div>
+<div id="u-trend-corr-wrap" data-simple-only><h3>피어슨 상관계수 r (선택한 X–Y)</h3><canvas id="u-trend-corr"></canvas></div>
 </div><p class="panel-note">계수의 X 단위가 서로 다르므로 숫자 크기를 변수 간 직접 비교하지 마세요. p값 그래프와 CSV는 실제 p값입니다.</p></section>
 <div class="section-top"><div><div class="eyebrow">04 / COMPLETE REGRESSION INDEX</div><h2>시점·광역·기초지자체별 회귀 통계표</h2></div></div>
 <section class="panel"><p>행의 「Raw·관측치」를 선택하면 해당 모형의 statsmodels 출력과 실제 관측자료를 아래에서 확인할 수 있습니다.</p>
@@ -60,6 +61,7 @@
 <div class="u-table-wrap"><table id="u-index-table"><thead id="u-index-head"></thead><tbody id="u-index-body"></tbody></table></div>
 <div class="u-pager"><span id="u-index-count">—</span><button id="u-prev" class="pager">이전</button><button id="u-next" class="pager">다음</button></div></section>
 <section class="panel"><div class="panel-title-row"><div><h2>선택 모형 · Raw·관측치</h2><p class="subtle" id="u-detail-title">비교표 행을 선택하세요.</p></div><button class="outline-button" id="u-observation-export" disabled>관측치 CSV 저장</button></div>
+<div id="u-scipy-detail" data-simple-only>
 <h3>SciPy Pearson r · p값 · 95% 신뢰구간</h3><p class="subtle">각 분석은 동일한 회귀 완전관측치에서 <code>scipy.stats.pearsonr(X, Y, alternative="two-sided")</code>를 실행합니다. 95% 구간은 <code>result.confidence_interval(confidence_level=0.95)</code>로 계산합니다. r은 이변량 상관으로, 다중회귀의 편상관 또는 OLS β가 아닙니다.</p>
 <div class="u-table-wrap"><table><thead><tr><th>설명변수</th><th>r</th><th>SciPy p(양측)</th><th>95% CI 하한</th><th>95% CI 상한</th><th>표본 n</th><th>상태</th><th>상세</th></tr></thead><tbody id="u-detail-corr"></tbody></table></div>
 <div class="panel-title-row"><div><h3>SciPy Raw 결과 및 실제 X·Y 관측자료</h3><p class="subtle">아래 출력은 SciPy가 반환한 <code>PearsonRResult</code>와 <code>ConfidenceInterval</code>의 실제 표현입니다. 계산 불가능한 경우에는 사유를 표시합니다.</p></div><button class="outline-button" id="u-scipy-export" disabled>상관분석 관측치 CSV 저장</button></div>
@@ -67,6 +69,7 @@
 <pre id="u-scipy-raw" class="u-raw">비교표에서 분석 모형을 선택하세요.</pre>
 <p id="u-scipy-observation-count" class="subtle"></p>
 <div class="u-table-wrap"><table><thead><tr><th>연도</th><th>광역</th><th>기초</th><th>X 설명변수 실제값</th><th>Y 장애유형 등록률(%)</th></tr></thead><tbody id="u-scipy-observation-body"></tbody></table></div>
+</div>
 <h3>실제 statsmodels.OLS(...).fit().summary() 출력</h3>
 <pre id="u-raw" class="u-raw">모형 선택 후 원문이 표시됩니다.</pre>
 <h3>완전관측치 · 적합값 · 잔차</h3><p class="subtle" id="u-observation-count"></p>
@@ -82,7 +85,7 @@
 <tr><td>가구당 건강보험료</td><td>연간 총보험료(천원) ÷ 주민등록세대수 ÷ 10 (만원/세대/년)</td><td>주민등록세대수</td></tr>
 </tbody></table></div>
 <p>진료비는 개인의 실제 본인부담액이나 모든 비급여를 포함한 의료비가 아닙니다. 가구당 건강보험료는 지역 총보험료를 주민등록세대수로 나눈 환산치이지, 가구별 고지액의 단순평균이 아닙니다. 건강보험료는 1인당으로 환산하지 않습니다.</p>
-<p>피어슨 r, 양측 p값, Fisher 변환 기반 95% 신뢰구간은 Python SciPy의 <code>scipy.stats.pearsonr</code>로 계산하며 원시 결과와 실제 X·Y 표본을 상세보기에서 확인할 수 있습니다. 표본 3개 이하에서는 신뢰구간이 극단적이거나 계산 불가능할 수 있습니다.</p><p>피어슨 상관계수 r은 −1~+1의 값으로 이변량 선형관계의 방향과 크기를 나타냅니다. r은 회귀계수 β나 R²와 다르고, 다중회귀에서는 다른 설명변수를 통제하지 않는 단순 상관입니다. 사용 표본이 2개 미만이거나 X 또는 Y가 상수이면 계산하지 않고 결측(—)으로 표시합니다. r이나 R²는 인과관계의 증거가 아닙니다.</p>
+<p>개별 단순회귀에서는 기울기 β₁과 SciPy 피어슨 r을 상단의 별도 카드로 표시합니다. 피어슨 r, 양측 p값, Fisher 변환 기반 95% 신뢰구간은 <code>scipy.stats.pearsonr</code>로 계산하고 단순회귀의 Raw·관측치에서 확인합니다. 6변수 다중회귀에는 상관계수를 표시하지 않고 여섯 개의 조건부 회귀계수 β, p값과 95% 신뢰구간을 제공합니다. 기존 SciPy 계산 데이터는 연구 재현성을 위해 보존합니다.</p><p>피어슨 상관계수 r은 −1~+1의 값으로 이변량 선형관계의 방향과 크기를 나타냅니다. r은 회귀계수 β나 R²와 다르고, 다중회귀에서는 다른 설명변수를 통제하지 않는 단순 상관입니다. 사용 표본이 2개 미만이거나 X 또는 Y가 상수이면 계산하지 않고 결측(—)으로 표시합니다. r이나 R²는 인과관계의 증거가 아닙니다.</p>
 <p>지역 단위 OLS는 통계적 연관성이지 인과관계가 아닙니다. 단순회귀 계수는 통제변수 없이 X의 1단위 증가와 연결된 등록률 변화(%p)를, 6변수 다중회귀 계수는 다른 다섯 X를 고정할 때의 변화(%p)를 뜻합니다. 서로 다른 단위의 계수 크기를 직접 비교하지 마세요. 인구구조·진료비·보험료·재정자립도 사이의 다중공선성, 건강비용과 지역의 질병부담 간 역방향 관계, 연도 통합 OLS의 지자체 반복관측·연도효과 미통제, 결측·행정구역 개편·집계 기준 차이 및 표본 수 변화를 고려해야 합니다.</p>
 <p>경기도 2014~2017년의 「청각·언어」 통합 등록인원은 청각·언어 각 유형에 임의 배분하거나 결측을 0으로 채우지 않습니다. 모든 불가한 회귀는 추정 실패 이유를 표시합니다. <a href="quality.html">품질 감사</a> · <a href="../README.md">연구 README</a></p></section>
 <section class="panel" id="repro-source-guide"><div class="eyebrow">06 / SOURCES & REPRODUCIBILITY</div>
