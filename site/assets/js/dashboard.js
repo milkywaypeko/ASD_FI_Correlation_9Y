@@ -82,7 +82,7 @@
       ]:[];
       Lab.setChart('scatter',{type:'scatter',data:{datasets:[
         {label:'관측 지자체',data:points,pointRadius:st.allYears?3:4,pointHoverRadius:7,
-         backgroundColor:'rgba(33,140,136,0.54)',pointBorderColor:'#fff',pointBorderWidth:.5},
+         backgroundColor:window.ResearchChartTheme.palette.observationFill,pointBorderColor:'#fff',pointBorderWidth:.5},
         {type:'line',label:'OLS 추정선',data:line,borderColor:colors.orange,backgroundColor:colors.orange,
          pointRadius:0,borderWidth:2.8,fill:false,order:0}
       ]},options:{responsive:true,maintainAspectRatio:false,animation:false,interaction:{mode:'nearest',intersect:true},
@@ -92,8 +92,8 @@
             return [`${r.year}년 · ${st.dtype==='전체'?'전체 장애인':st.dtype}`,
               `재정자립도 (${meta.modes[st.mode]}): ${Lab.numeric(ctx.parsed.x)}`,
               `장애인 등록률: ${Lab.numeric(ctx.parsed.y,5)}%`, ...(r.missingTypes.length?['원본 장애유형 일부 공란: '+r.missingTypes.join(', ')]:[])];}
-        }}},scales:{x:{type:'linear',title:{display:true,text:`재정자립도 (0~1, ${meta.modes[st.mode]})`,color:'#637386',font:{size:12}},
-          grid:{color:'#eef1f5'},ticks:{color:'#8d9aab'}},y:{title:{display:true,text:`${st.dtype==='전체'?'전체 장애인':st.dtype} 등록률 (%)`,color:'#637386'},grid:{color:'#eef1f5'},ticks:{color:'#8d9aab'}}}}});
+        }}},scales:{x:{type:'linear',title:{display:true,text:`재정자립도 (0~1, ${meta.modes[st.mode]})`,color:window.ResearchChartTheme.palette.text,font:{size:12}},
+          grid:{color:window.ResearchChartTheme.palette.grid},ticks:{color:window.ResearchChartTheme.palette.text}},y:{title:{display:true,text:`${st.dtype==='전체'?'전체 장애인':st.dtype} 등록률 (%)`,color:window.ResearchChartTheme.palette.text},grid:{color:window.ResearchChartTheme.palette.grid},ticks:{color:window.ResearchChartTheme.palette.text}}}}});
       const warning=current?.warning|| (current?.slope==null?'해당 조건에서는 유효한 OLS 모형을 계산할 수 없습니다.':'');
       Lab.text('scatter-status',`${view.length}개 관측치 표시. ${warning}`);
     }
