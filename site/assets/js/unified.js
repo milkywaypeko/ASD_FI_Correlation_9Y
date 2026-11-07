@@ -429,7 +429,7 @@
         if(column.key==='action') {
           const button=document.createElement('button');
           button.className='outline-button';button.textContent='Raw·관측치';
-          button.onclick=()=>{select(item);$('u-raw').scrollIntoView({behavior:'smooth',block:'center'});};
+          button.onclick=()=>{select(item);$('u-detail-title').scrollIntoView({behavior:'smooth',block:'start'});};
           td.append(button);
         } else {
           let value=item[column.key];
