@@ -592,17 +592,19 @@ def build_fiscal_birth_ols(out: Path, detail: list[dict], province_rows: list[di
 
 
 def write_project_root_entrypoint(base: Path, out: Path):
-    """Keep the full project at GitHub Pages / (root) without moving site/data.
+    """Publish the current final six-variable explorer at the Pages root.
 
-    Root index is the actual homepage markup; an HTML base tag makes its links,
-    scripts, styles and fetch('data/...') resolve within ./site/. It is not a
-    redirect or a dependency on server-side rewriting.
+    Keep site/index.html as the original fiscal-independence data explorer.
+    The root entrypoint is the full site/unified.html, not a redirect: <base>
+    resolves JS, styles, links, and data fetches inside ./site/. Regenerate
+    it on every build so a manual edit cannot revert to the legacy homepage.
     """
     if out.resolve() != (base / "site").resolve():
         return
-    html = (out / "index.html").read_text(encoding="utf-8")
+    source = out / "unified.html"
+    html = source.read_text(encoding="utf-8")
     if "<head>" not in html:
-        raise ValueError("사이트 index.html에 <head>가 없습니다.")
+        raise ValueError("사이트 unified.html에 <head>가 없습니다.")
     html = html.replace("<head>", '<head><base href="./site/">', 1)
     (base / "index.html").write_text(html, encoding="utf-8")
     (base / ".nojekyll").write_text("", encoding="utf-8")
