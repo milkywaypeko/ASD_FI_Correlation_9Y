@@ -323,11 +323,16 @@ def _emit_models(out: Path, prefix: str, detail: list[dict], provinces: list[dic
     def predictors_for(mode):
         return ((mode,) + predictors) if fiscal_mode else predictors
 
+    analysis_years = (tuple(range(2015, 2023))
+                      if prefix in ("medical_ols_models", "household_premium_ols_models")
+                      else YEARS)
+    permitted = set(analysis_years)
     by_local = defaultdict(list)
     for row in detail:
-        by_local[(row["province"], row["district"])].append(row)
+        if row["year"] in permitted:
+            by_local[(row["province"], row["district"])].append(row)
     total = 0
-    for year in YEARS:
+    for year in analysis_years:
         rows = [r for r in detail if r["year"] == year]
         prov_rows = [r for r in provinces if r["year"] == year]
         for mode in (MODES if fiscal_mode else (None,)):
@@ -338,7 +343,9 @@ def _emit_models(out: Path, prefix: str, detail: list[dict], provinces: list[dic
 
     pooled, history = [], []
     for mode in (MODES if fiscal_mode else (None,)):
-        pooled.extend(models(detail, provinces, "전기간", mode))
+        pooled.extend(models([r for r in detail if r["year"] in permitted],
+                             [r for r in provinces if r["year"] in permitted],
+                             "전기간", mode))
         for (prov, district), rows in sorted(by_local.items()):
             history.append(fit_extended_ols(rows, predictors_for(mode),
                                             "local_history", prov + "|" + district,
