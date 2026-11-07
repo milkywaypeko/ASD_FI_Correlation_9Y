@@ -17,12 +17,13 @@
 <div class="small-divider"></div><p>계수·p값은 인과관계를 입증하지 않습니다. 연도 통합에서는 반복관측·연도효과가 통제되지 않습니다.</p></div></aside>
 <main class="main-area">
 <header class="page-header"><div><div class="eyebrow">REGRESSION / DEMOGRAPHIC AND MEDICAL STATISTICS</div>
-<h1>1인당 진료비 × 장애인 등록률</h1><p class="lead">주민등록연앙인구 1인당 진료비(만원)와 장애인 등록률의 단순선형회귀 결과입니다.</p></div>
+<h1>1인당 진료비 × 장애인 등록률</h1><p class="lead">주민등록연앙인구 1인당 진료비(만원)와 선택한 장애유형 등록률의 단순선형회귀 결과입니다.</p></div>
 <div class="year-range">2014 <span>—</span> 2022<div>PYTHON STATSMODELS OLS</div></div></header>
-<section class="model-intro"><div><strong>종속변수</strong><span>전체 장애인 등록률 (등록인원 ÷ 주민등록인구 × 100, %)</span></div>
+<section class="model-intro"><div><strong>종속변수</strong><span><span id="an-outcome">전체 장애인 등록률 = 전체 등록인원 ÷ 주민등록인구 × 100 (%)</span></span></div>
 <div><strong>회귀식</strong><span>등록률(%) = β₀ + β₁ × 1인당 진료비(만원)</span></div></section>
 <section class="filter-panel"><div class="filter-header"><h2>분석 조건</h2><span class="subtle">필터 변경 시 사전 계산된 Python OLS 결과를 표시</span></div>
 <div class="filter-grid">
+<label>장애유형<select id="an-type" aria-label="분석할 장애유형"></select></label>
 <label>분석 단위<select id="an-scope"><option value="municipal">기초지자체 간 비교</option><option value="provincial">광역지자체 간 비교</option><option value="local_history">개별 기초지자체 시계열</option></select></label>
 <label>광역지자체<select id="an-province"></select></label>
 <label id="an-district-wrap" hidden>기초지자체<select id="an-district"></select></label>
@@ -43,11 +44,11 @@
 <section class="panel"><div class="an-chart-box"><canvas id="an-chart"></canvas></div><p class="panel-note" id="an-chart-note"></p></section>
 <div class="section-top"><div><div class="eyebrow">03 / OBSERVATION AUDIT</div><h2>원자료 결합 관측치 · 예측값 · 잔차</h2></div><button type="button" id="an-export" class="an-export">관측치 CSV 다운로드</button></div>
 <section class="panel"><p id="an-table-count" class="panel-note"></p><div class="an-table-scroll"><table><thead id="an-table-head"></thead><tbody id="an-table-body"></tbody></table></div></section>
-<div class="section-top"><div><div class="eyebrow">04 / STATSMODELS</div><h2>원문 회귀분석 결과</h2></div></div>
+<div class="section-top"><div><div class="eyebrow">04 / STATSMODELS</div><h2>회귀분석 통계 요약 (전체: statsmodels 원문)</h2></div></div>
 <section class="panel"><pre class="an-raw" id="an-raw"></pre></section>
 <section class="panel"><h2>변수 정의와 해석 유의사항</h2><p class="panel-note">
 65세 이상·0~14세 인구비율은 해당 연도 주민등록연앙인구를 분모로 계산합니다. 의료비는 전체 연령 진료비(천원)를 원으로 변환한 후 주민등록연앙인구로 나누어 만원/인 단위로 표시합니다.
-전체 장애인 등록률은 기존 자료의 장애인 등록인원 ÷ 주민등록인구 × 100(%)을 사용합니다.
+선택한 장애유형 등록률은 해당 유형의 등록인원 ÷ 기존 주민등록인구 × 100(%)을 사용합니다. 원본 자료에서 빠진 유형은 0으로 채우지 않습니다. 2014~2017년 경기도의 청각·언어 통합 자료는 다른 지역·연도의 청각 또는 언어 자료로 분리하거나 대체하지 않습니다.
 서로 다른 출처의 모집단·집계 방식에 차이가 있을 수 있으며 의료비는 보험 진료비 통계로 모든 비급여 지출을 뜻하지 않습니다.
 동일 시점의 지역별 관계를 기술하며 장애 발생의 원인이나 정책효과로 해석해서는 안 됩니다.</p>
 <p><a href="quality.html">기존 자료 품질 설명</a> · <a href="data/age_medical_quality.json">추가 분석 결합·결측 감사(JSON)</a></p></section>

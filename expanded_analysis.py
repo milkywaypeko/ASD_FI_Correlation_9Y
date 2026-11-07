@@ -255,14 +255,15 @@ def _finite(value):
 
 
 def fit_extended_ols(rows: list[dict], predictors: tuple[str, ...],
-                     scope: str, region: str, year: int | str, mode: str | None = None):
+                     scope: str, region: str, year: int | str, mode: str | None = None,
+                     dtype: str = "전체", full_summary: bool = True):
     """Complete-case OLS with a constant, rank check, and explicit warnings."""
-    valid = [r for r in rows if r.get("rates", {}).get("전체") is not None
+    valid = [r for r in rows if r.get("rates", {}).get(dtype) is not None
              and all(r.get(field) is not None and math.isfinite(float(r[field])) for field in predictors)]
     k = len(predictors)
     result = {
         "scope": scope, "region": region, "year": year, "mode": mode,
-        "n": len(valid), "predictors": list(predictors),
+        "type": dtype, "n": len(valid), "predictors": list(predictors),
         "intercept": None, "coefficients": {}, "r2": None, "adj_r2": None,
         "p_model": None, "warning": None, "raw": None,
     }
@@ -270,7 +271,7 @@ def fit_extended_ols(rows: list[dict], predictors: tuple[str, ...],
         result["warning"] = f"회귀에 필요한 완전 관측치가 부족합니다 (최소 {k + 2}개)."
         return result
     x = np.asarray([[float(r[field]) for field in predictors] for r in valid])
-    y = np.asarray([float(r["rates"]["전체"]) for r in valid])
+    y = np.asarray([float(r["rates"][dtype]) for r in valid])
     if not np.isfinite(y).all():
         result["warning"] = "종속변수에 유효하지 않은 수치가 있습니다."
         return result
@@ -282,7 +283,8 @@ def fit_extended_ols(rows: list[dict], predictors: tuple[str, ...],
         with warnings.catch_warnings():
             warnings.simplefilter("ignore")
             model = sm.OLS(y, design).fit()
-            raw = str(model.summary(xname=["const"] + [field.replace("before","fiscal_before").replace("after","fiscal_after") for field in predictors]))
+            raw = (str(model.summary(xname=["const"] + [field.replace("before","fiscal_before").replace("after","fiscal_after") for field in predictors]))
+                   if full_summary else None)
         ci = model.conf_int(alpha=.05)
         coefficients = {
             field: {
@@ -298,6 +300,15 @@ def fit_extended_ols(rows: list[dict], predictors: tuple[str, ...],
                       adj_r2=_finite(model.rsquared_adj),
                       p_model=float(model.f_pvalue) if math.isfinite(float(model.f_pvalue)) else None,
                       raw=raw)
+        if not full_summary:
+            # Compact statsmodels-derived summary avoids large per-type static files.
+            lines = [f"OLS / {dtype} 장애유형 등록률 (%)", f"분석: {scope} / {region} / {year}",
+                     f"n = {result['n']}", f"R² = {result['r2']}",
+                     f"Adj. R² = {result['adj_r2']}", f"F-test p = {result['p_model']}",
+                     f"절편 = {result['intercept']}"]
+            lines.extend(f"{key}: β={data['coef']}, p={data['p']}, 95% CI={data['ci']}"
+                         for key, data in coefficients.items())
+            result["raw"] = "\n".join(lines)
     except (ValueError, np.linalg.LinAlgError) as exc:
         result["warning"] = f"OLS 계산 실패: {exc}"
     return result
@@ -349,8 +360,70 @@ def _emit_models(out: Path, prefix: str, detail: list[dict], provinces: list[dic
             "estimated_models": sum(m["intercept"] is not None for m in pooled + history)}
 
 
+
+def _emit_disability_type_models(out: Path, detail: list[dict], provinces: list[dict],
+                                 types: list[str]):
+    """Precompute all 4 regressions per disability type in lazily fetched files.
+
+    Models retain annual, nationwide/provincial, pooled, and locality histories;
+    only their full statsmodels text dumps are compacted to limit site size.
+    All source category missingness is preserved, never converted to zero.
+    """
+    yearly = {y: [r for r in detail if r["year"] == y] for y in YEARS}
+    province_yearly = {y: [r for r in provinces if r["year"] == y] for y in YEARS}
+    history = defaultdict(list)
+    for r in detail:
+        history[(r["province"], r["district"])].append(r)
+    configurations = {
+        "demographic_multi_models": (("age65_percent", "under15_percent", "fertility", MEDICAL), True),
+        "age65_ols_models": (("age65_percent",), False),
+        "under15_ols_models": (("under15_percent",), False),
+        "medical_ols_models": ((MEDICAL,), False),
+    }
+    summary = {}
+    for index, dtype in enumerate(types):
+        if dtype == "전체":
+            continue  # Existing 53 files retain the default '전체' models.
+        counts = {}
+        for prefix, (predictors, is_multi) in configurations.items():
+            models = []
+            modes = MODES if is_multi else (None,)
+            for period in (*YEARS, "전기간"):
+                subset = yearly[period] if isinstance(period, int) else detail
+                prov_subset = province_yearly[period] if isinstance(period, int) else provinces
+                grouped = {prov: [r for r in subset if r["province"] == prov] for prov in PROVINCES}
+                # Only a province with complete district-type reporting yields an
+                # aggregate type rate. Partial totals must never masquerade as full.
+                complete_prov = [r for r in prov_subset if dtype in r.get("complete_types", [])]
+                for fiscal in modes:
+                    names = ((fiscal,) + predictors) if fiscal else predictors
+                    def fit(rows, scope, region, p=period):
+                        return fit_extended_ols(rows, names, scope, region, p,
+                                                fiscal, dtype, full_summary=False)
+                    models.append(fit(subset, "municipal", "전국"))
+                    models.extend(fit(grouped[prov], "municipal", prov) for prov in PROVINCES)
+                    models.append(fit(complete_prov, "provincial", "전국"))
+            for fiscal in modes:
+                names = ((fiscal,) + predictors) if fiscal else predictors
+                for (prov, district), rows in sorted(history.items()):
+                    models.append(fit_extended_ols(
+                        rows, names, "local_history", prov + "|" + district,
+                        "전기간", fiscal, dtype, full_summary=False))
+            filename = f"{prefix}_type_{index:02d}.json"
+            _write_json(out / "data" / filename, {"type": dtype, "models": models})
+            counts[prefix] = {
+                "models": len(models),
+                "fitted": sum(m["intercept"] is not None for m in models),
+                "annual_2022_national_n": next(
+                    (m["n"] for m in models if m["scope"] == "municipal"
+                     and m["region"] == "전국" and m["year"] == 2022), 0),
+            }
+        summary[dtype] = counts
+    return summary
+
+
 def build_expanded_analysis(stats: Path, out: Path, detail: list[dict],
-                            province_rows: list[dict]):
+                            province_rows: list[dict], disability_types: list[str] | None = None):
     """Enrich observation rows in-place and write all four requested model sets.
 
     Run after build_multivariate(), so its fertility field has already joined.
@@ -369,6 +442,17 @@ def build_expanded_analysis(stats: Path, out: Path, detail: list[dict],
         row["medical_total_thousand_krw"] = medical_cost
         row[MEDICAL] = _finite(medical_cost / (10.0 * population)) if (
             medical_cost is not None and population is not None and population > 0) else None
+
+    # Keep partial provincial disability aggregations from being treated as
+    # complete observations in the new type-filtered models and plots.
+    disability_types = disability_types or ["전체"]
+    municipalities_by_province = defaultdict(list)
+    for row in detail:
+        municipalities_by_province[(row["year"], row["province"])].append(row)
+    for row in province_rows:
+        members = municipalities_by_province[(row["year"], row["province"])]
+        row["complete_types"] = [dtype for dtype in disability_types
+                                 if members and all(dtype in m["rates"] for m in members)]
 
     checks = ("age65_percent", "under15_percent", "fertility", MEDICAL)
     audit = {
@@ -398,6 +482,13 @@ def build_expanded_analysis(stats: Path, out: Path, detail: list[dict],
                                   ("age65_percent", "under15_percent", "fertility", MEDICAL), True)
     for label, field in SIMPLE.items():
         audit[label] = _emit_models(out, f"{label}_ols_models", detail, province_rows, (field,), False)
+    if len(disability_types) > 1:
+        audit["disability_type_regressions"] = _emit_disability_type_models(
+            out, detail, province_rows, disability_types)
+        audit["type_regression_note"] = (
+            "청각·언어는 경기도 2014~2017년 통합 집계만 사용; "
+            "청각/언어로 분리하거나 결측을 0으로 대체하지 않음. "
+            "광역 장애유형별 등록률은 하위 지역의 모든 유형 자료가 있는 경우만 사용.")
     _write_json(out / "data" / "age_medical_quality.json", audit)
     print("인구구조·의료비 추가 분석:", json.dumps(
         {key: audit[key] for key in ("municipal_by_variable", "municipal_complete_cases", "multi", "age65", "under15", "medical")}, ensure_ascii=False), flush=True)
