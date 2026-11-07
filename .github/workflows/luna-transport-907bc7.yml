@@ -1,0 +1,31 @@
+name: Temporary exact-source transport 907bc7
+on:
+  push:
+    branches: [feature/full-statsmodels-summaries-907bc7]
+    paths: ['.github/workflows/luna-transport-907bc7.yml']
+permissions:
+  contents: read
+jobs:
+  export:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: 9de0a5c141c05a613df4abf3cb8e3a99fbb0de3f
+          persist-credentials: false
+      - name: Package immutable source
+        shell: bash
+        run: |
+          test "$(git rev-parse HEAD)" = "9de0a5c141c05a613df4abf3cb8e3a99fbb0de3f"
+          git archive --format=tar HEAD | gzip -6 > source.tar.gz
+          echo "9de0a5c141c05a613df4abf3cb8e3a99fbb0de3f" > source.sha
+          sha256sum source.tar.gz > source.tar.gz.sha256
+      - uses: actions/upload-artifact@v4
+        with:
+          name: source-907bc7
+          path: |
+            source.tar.gz
+            source.sha
+            source.tar.gz.sha256
+          retention-days: 1
