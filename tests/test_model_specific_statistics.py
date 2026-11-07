@@ -10,11 +10,11 @@ def test_model_specific_cards_and_panels():
     js = (SITE / "assets/js/unified.js").read_text(encoding="utf-8")
     css = (SITE / "assets/css/style.css").read_text(encoding="utf-8")
     for id_ in ("u-slope-card", "u-slope", "u-slope-variable",
-                "u-corr-card", "u-corr", "u-trend-corr-wrap",
+                "u-corr-card", "u-corr", "u-slope-p-card", "u-slope-p", "u-trend-corr-wrap",
                 "u-scipy-section", "u-coeff-title", "u-coeff-explanation"):
         assert f'id="{id_}"' in html, id_
     assert "const isSimple = () => state.model !== 'six'" in js
-    for id_ in ("u-slope-card", "u-corr-card", "u-trend-corr-wrap", "u-scipy-section"):
+    for id_ in ("u-slope-card", "u-corr-card", "u-slope-p-card", "u-trend-corr-wrap", "u-scipy-section"):
         assert f"'{id_}'" in js
         assert f"#{id_}[hidden]" in css
     assert "el.hidden = !simple" in js
@@ -48,3 +48,20 @@ def test_github_pages_root_matches_unified():
     html = (SITE / "unified.html").read_text(encoding="utf-8")
     root = (ROOT / "index.html").read_text(encoding="utf-8")
     assert root.replace('<base href="./site/">', '', 1) == html
+
+
+def test_simple_ols_slope_pvalue_and_scientific_notation():
+    html = (SITE / "unified.html").read_text(encoding="utf-8")
+    js = (SITE / "assets/js/unified.js").read_text(encoding="utf-8")
+    assert 'id="u-slope-p-card"' in html
+    assert 'id="u-slope-p"' in html
+    assert "text('u-slope-p',fmtP(item.pvalues?.[0], 9))" in js
+    assert "text('u-pmodel',fmtP(item.p_model,9))" in js
+    assert "const fmtP = (x, digits = 9) =>" in js
+    assert "if (Math.abs(p) < 10 ** (-digits)) return p.toExponential(3)" in js
+    assert "if (p === 0) return '0 (계산 정밀도 한계 가능)'" in js
+    assert "values.push(fmtP(c.p, 9))" in js
+    assert "values.push(fmtP(item?.correlation_pvalues?.[i], 9))" in js
+    assert "fmtP(scipy?.pvalue, 10)" in js
+    assert "fmtP(value, 8)" in js
+    assert "fmtP(c.raw.y,10)" in js
