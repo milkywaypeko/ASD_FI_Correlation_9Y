@@ -37,10 +37,14 @@
 
   function isActive(key) {
     const page = currentPage();
-    if (key === 'index.html') return page === 'index.html';
+    // The project root now renders the six-variable explorer directly.
+    // site/index.html remains the original fiscal data exploration page.
+    const rootLanding = !window.location.pathname.includes('/site/') &&
+      (window.location.pathname.endsWith('/') || page === 'index.html');
+    if (key === 'index.html') return page === 'index.html' && !rootLanding;
     if (key === 'quality.html') return page === 'quality.html';
     if (key.endsWith('.html')) return page === key;
-    return page === 'unified.html' && unifiedModel() === key;
+    return (page === 'unified.html' || rootLanding) && unifiedModel() === key;
   }
 
   function link(key, title, icon, nested = false) {
