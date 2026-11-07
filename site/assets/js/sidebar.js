@@ -27,7 +27,8 @@
   function currentPage() {
     // The project root "/" uses a <base href="./site/"> for its assets.
     // Compare the actual location to avoid treating / as a different page.
-    return window.location.pathname.split('/').pop() || 'index.html';
+    return window.location.pathname.endsWith('/') ? 'index.html' :
+      (window.location.pathname.split('/').pop() || 'index.html');
   }
 
   function unifiedModel() {
