@@ -33,6 +33,7 @@
 <div class="kpi"><div class="kpi-label">Adjusted R² 수정 결정계수</div><div class="kpi-value" id="u-adjr2">—</div></div>
 <div class="kpi"><div class="kpi-label">F검정 모형 p값</div><div class="kpi-value" id="u-pmodel">—</div></div>
 <div class="kpi"><div class="kpi-label">표본 수 n</div><div class="kpi-value" id="u-n">—</div></div>
+<div class="kpi" id="u-slope-card"><div class="kpi-label">단순회귀 기울기 β₁ <span id="u-slope-variable"></span></div><div class="kpi-value" id="u-slope">—</div><div class="kpi-foot">X 1단위 증가당 등록률 변화 (%p)</div></div>
 <div class="kpi" id="u-corr-card"><div class="kpi-label">피어슨 상관계수 r <span id="u-corr-variable"></span></div><div class="kpi-value" id="u-corr">—</div></div>
 </section>
 <section class="panel"><h2 id="u-coeff-title">설명변수별 회귀계수 β와 SciPy 피어슨 상관계수 r</h2><p class="subtle" id="u-coeff-explanation">X가 1단위 증가할 때 등록률 Y의 예상 변화량은 %p입니다. 다중회귀의 계수 β는 나머지 변수를 일정하게 유지한 조건부 연관성입니다. <strong>피어슨 r은 동일 완전관측 표본의 Y와 각 X 사이의 이변량 선형 상관계수</strong>로, 다른 변수를 통제한 편상관이나 β가 아닙니다. 계산이 불가능한 r은 —로 표시합니다.</p><div class="u-table-wrap"><table><thead><tr><th>설명변수 / 단위</th><th>기울기 β</th><th data-simple-correlation>SciPy r (Y–X)</th><th>OLS β p값</th><th data-simple-correlation>SciPy r p값(양측)</th><th>OLS β 95% CI 하한</th><th>OLS β 95% CI 상한</th></tr></thead><tbody id="u-coefficients"></tbody></table></div><p id="u-warning" class="panel-note"></p></section>
