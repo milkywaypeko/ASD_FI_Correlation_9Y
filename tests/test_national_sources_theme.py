@@ -78,6 +78,6 @@ def test_kosis_citations_do_not_invent_unverified_download_table_ids():
 def test_reproducibility_not_to_delete_source_folders():
     text=(ROOT / "REPRODUCIBILITY.md").read_text(encoding="utf-8")
     for term in ("Statistics/", "2014", "site/data", "site/raw",
-                 "__pycache__", ".pytest_cache", "site/ 폴더 전체",
+                 "__pycache__", ".pytest_cache", "site/", "폴더 전체는 삭제하지",
                  "python build.py", "requirements.txt", ".github/"):
         assert term in text, term
