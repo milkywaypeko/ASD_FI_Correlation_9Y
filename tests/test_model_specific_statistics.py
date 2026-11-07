@@ -59,7 +59,7 @@ def test_simple_ols_slope_pvalue_and_scientific_notation():
     assert "text('u-pmodel',fmtP(item.p_model,9))" in js
     assert "const fmtP = (x, digits = 9) =>" in js
     assert "if (Math.abs(p) < 10 ** (-digits)) return p.toExponential(3)" in js
-    assert "if (p === 0) return '0 (계산 정밀도 한계 가능)'" in js
+    assert "if (p === 0) return '0 (정밀도 한계 가능)'" in js
     assert "values.push(fmtP(c.p, 9))" in js
     assert "values.push(fmtP(item?.correlation_pvalues?.[i], 9))" in js
     assert "fmtP(scipy?.pvalue, 10)" in js
