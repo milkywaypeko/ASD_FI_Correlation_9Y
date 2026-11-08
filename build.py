@@ -993,7 +993,9 @@ def _namespace_unified_analysis():
         for row in provinces:
             province_aggregate_groups[row["province"]].append(row)
     
+        import time
         for key, spec in SPECS.items():
+            started = time.perf_counter()
             allowed = set(spec["years"])
             annual = {y: [r for r in detail if r["year"] == y] for y in spec["years"]}
             annual_prov = {y: [r for r in provinces if r["year"] == y] for y in spec["years"]}
@@ -1001,6 +1003,15 @@ def _namespace_unified_analysis():
             pooled_prov = [r for r in provinces if r["year"] in allowed]
             history = {region: [r for r in rows if r["year"] in allowed]
                        for region, rows in local_groups.items()}
+            grouped_periods = {}
+            for period in (*spec["years"], "pooled"):
+                subset = pooled if period == "pooled" else annual[period]
+                grouped = defaultdict(list)
+                for row in subset:
+                    grouped[row["province"]].append(row)
+                grouped_periods[period] = grouped
+            history_scopes = [("local_history", prov + "|" + dist, rows)
+                              for (prov, dist), rows in sorted(history.items())]
             index = []
             total_fitted = 0
             for type_index, dtype in enumerate(types):
@@ -1011,15 +1022,16 @@ def _namespace_unified_analysis():
                 payload = {}
                 for period in (*spec["years"], "pooled", "history"):
                     if period == "history":
-                        scopes = [("local_history", prov + "|" + dist, rows)
-                                  for (prov, dist), rows in sorted(history.items())]
+                        scopes = history_scopes
                         model_period = "전기간"
                     else:
                         subset = pooled if period == "pooled" else annual[period]
                         subset_prov = pooled_prov if period == "pooled" else annual_prov[period]
+                        # Build province partitions once per period rather than
+                        # rescanning all rows for every disability type.
+                        groups = grouped_periods[period]
                         scopes = [("municipal", "전국", subset)]
-                        scopes.extend(("municipal", province,
-                                       [r for r in subset if r["province"] == province])
+                        scopes.extend(("municipal", province, groups[province])
                                       for province in PROVINCES)
                         scopes.append(("provincial", "전국", subset_prov))
                         model_period = "전기간" if period == "pooled" else period
@@ -1041,7 +1053,7 @@ def _namespace_unified_analysis():
                 "models": len(index), "fitted": total_fitted,
                 "years": list(spec["years"]), "label": spec["label"],
             }
-            print("통합 OLS", key, results[key], flush=True)
+            print("통합 OLS", key, results[key], f"elapsed={time.perf_counter()-started:.1f}s", flush=True)
     
         _save(out / "data" / "unified_manifest.json", {
             "types": types, "provinces": PROVINCES,
@@ -1788,11 +1800,16 @@ def build(base: Path, out: Path):
         print(f"  pooled {mode}: {len(all_models)}; local history {len(hist_models)}", flush=True)
     write_json(out / "data" / "models_pooled.json", all_models)
     write_json(out / "data" / "models_local_history.json", hist_models)
+    import time
+    analysis_started = time.perf_counter()
     birth_audit = build_multivariate(stats, out, detail, province_rows)
     birth_ols_audit = build_birth_ols(out, detail, province_rows)
     fiscal_birth_audit = build_fiscal_birth_ols(out, detail, province_rows)
     expanded_audit = build_expanded_analysis(stats, out, detail, province_rows, TYPES)
+    print(f"기존 분석 생성 소요: {time.perf_counter()-analysis_started:.1f}s", flush=True)
+    unified_started = time.perf_counter()
     unified_audit = build_unified_analysis(out, detail, province_rows, TYPES)
+    print(f"통합 회귀 생성 소요: {time.perf_counter()-unified_started:.1f}s", flush=True)
     # Do not publish superseded five-variable or duplicate six-variable JSON.
     for obsolete_prefix in ("demographic_multi_models_", "household_premium_multi_models_"):
         for obsolete in (out / "data").glob(obsolete_prefix + "*.json"):
