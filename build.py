@@ -376,69 +376,9 @@ def _namespace_expanded_analysis():
     
     
     
-    def _emit_disability_type_models(out: Path, detail: list[dict], provinces: list[dict],
-                                     types: list[str]):
-        """Precompute all 6 regressions per disability type in lazily fetched files.
-    
-        Models retain annual, nationwide/provincial, pooled, and locality histories;
-        the full statsmodels OLS Regression Results are preserved for every fit.
-        All source category missingness is preserved, never converted to zero.
-        """
-        yearly = {y: [r for r in detail if r["year"] == y] for y in YEARS}
-        province_yearly = {y: [r for r in provinces if r["year"] == y] for y in YEARS}
-        history = defaultdict(list)
-        for r in detail:
-            history[(r["province"], r["district"])].append(r)
-        configurations = {
-            "demographic_multi_models": (("age65_percent", "under15_percent", "fertility", MEDICAL), True),
-            "age65_ols_models": (("age65_percent",), False),
-            "under15_ols_models": (("under15_percent",), False),
-            "medical_ols_models": ((MEDICAL,), False),
-            "household_premium_multi_models": (("age65_percent", "under15_percent", "fertility", MEDICAL, "premium_10k_per_household"), True),
-            "household_premium_ols_models": (("premium_10k_per_household",), False),
-        }
-        summary = {}
-        for index, dtype in enumerate(types):
-            if dtype == "전체":
-                continue  # Existing 53 files retain the default '전체' models.
-            counts = {}
-            for prefix, (predictors, is_multi) in configurations.items():
-                models = []
-                modes = MODES if is_multi else (None,)
-                for period in (*YEARS, "전기간"):
-                    subset = yearly[period] if isinstance(period, int) else detail
-                    prov_subset = province_yearly[period] if isinstance(period, int) else provinces
-                    grouped = {prov: [r for r in subset if r["province"] == prov] for prov in PROVINCES}
-                    # Only a province with complete district-type reporting yields an
-                    # aggregate type rate. Partial totals must never masquerade as full.
-                    complete_prov = [r for r in prov_subset if dtype in r.get("complete_types", [])]
-                    for fiscal in modes:
-                        names = ((fiscal,) + predictors) if fiscal else predictors
-                        def fit(rows, scope, region, p=period):
-                            return fit_extended_ols(rows, names, scope, region, p,
-                                                    fiscal, dtype)
-                        models.append(fit(subset, "municipal", "전국"))
-                        models.extend(fit(grouped[prov], "municipal", prov) for prov in PROVINCES)
-                        models.append(fit(complete_prov, "provincial", "전국"))
-                for fiscal in modes:
-                    names = ((fiscal,) + predictors) if fiscal else predictors
-                    for (prov, district), rows in sorted(history.items()):
-                        models.append(fit_extended_ols(
-                            rows, names, "local_history", prov + "|" + district,
-                            "전기간", fiscal, dtype))
-                filename = f"{prefix}_type_{index:02d}.json"
-                _write_json(out / "data" / filename, {"type": dtype, "models": models})
-                counts[prefix] = {
-                    "models": len(models),
-                    "fitted": sum(m["intercept"] is not None for m in models),
-                    "annual_2022_national_n": next(
-                        (m["n"] for m in models if m["scope"] == "municipal"
-                         and m["region"] == "전국" and m["year"] == 2022), 0),
-                }
-            summary[dtype] = counts
-        return summary
-    
-    
+    # Retired per-disability shard generator removed: unified_analysis now
+    # creates the sole active per-type regression index and detail files.
+
     def build_expanded_analysis(stats: Path, out: Path, detail: list[dict],
                                 province_rows: list[dict], disability_types: list[str] | None = None):
         """Enrich observation rows in-place and write requested model sets.
@@ -514,7 +454,7 @@ def _namespace_expanded_analysis():
             ][:100],
         }
         # Legacy five-variable and duplicate six-variable generations are retired.
-        # The seven current models (all disability types) share unified_analysis.py.
+        # The seven current models (all disability types) share the unified builder.
         for label, field in SIMPLE.items():
             audit[label] = _emit_models(out, f"{label}_ols_models", detail, province_rows, (field,), False)
         audit["household_premium_ols"] = _emit_models(
