@@ -2,9 +2,13 @@
 
 **연구 기간 2014–2022 · 건강보험 관련 회귀 2015–2022 · Python statsmodels OLS · GitHub Pages 정적 사이트**
 
-[**대시보드 바로가기**](https://milkywaypeko.github.io/ASD_FI_Correlation_9Y/) · [원본 데이터 설명](Statistics/README.md) · [데이터 품질·연구 방법](site/quality.html)
+[**대시보드 바로가기**](https://milkywaypeko.github.io/ASD_FI_Correlation_9Y/) · [원본 데이터 설명](Statistics/README.md) · [데이터 품질·연구 방법](site/quality.html) · [KOSIS 30개 원표·인용문·CSV 경로](KOSIS_SOURCES.md#사용자-제공-kosis-인용문직접-url저장-csv-대응표-20261108)
 
 지역별 재정자립도, 인구구조, 합계출산율, 1인당 진료비, 가구당 건강보험료와 **선택한 장애유형의 등록률(%)** 사이의 통계적 연관성을 탐색하는 연구용 사이트입니다. 계산은 Python에서 사전 실행하며 브라우저에서는 생성된 정적 데이터만 읽습니다. **OLS는 인과관계를 입증하지 않습니다.**
+
+## KOSIS 출처 30건과 원자료 경로
+
+사용자가 제공한 2026.11.08 인용문·원표 URL 30개(기초 통계 5, 보험료 4, 진료비 4, 장애인등록 17)를 **해당 통계 CSV의 실제 저장소 경로와 함께** [KOSIS 출처 등록부](KOSIS_SOURCES.md)에 수록했습니다. [데이터 품질·연구 방법 페이지](site/quality.html#kosis-citations)에서도 인용문, KOSIS 링크, 원본 파일 경로를 나란히 확인할 수 있습니다. 인용문의 최신 통계 연도와 회귀분석 연도(2014–2022)는 다르며 최초 원본 CSV 다운로드일은 기록되지 않았습니다.
 
 ## 한국어 / English 전환
 

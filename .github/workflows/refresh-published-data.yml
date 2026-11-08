@@ -1,0 +1,55 @@
+name: Refresh published statistical data after source-integrity changes
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'build.py'
+      - 'Statistics/**'
+      - 'requirements.txt'
+      - '.github/workflows/refresh-published-data.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: refresh-published-statistics-main
+  cancel-in-progress: false
+
+jobs:
+  rebuild:
+    if: github.ref == 'refs/heads/main' && github.actor != 'github-actions[bot]'
+    runs-on: ubuntu-latest
+    timeout-minutes: 65
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          persist-credentials: true
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+          cache: pip
+      - name: Install dependencies and test runner
+        run: |
+          python -m pip install -r requirements.txt
+          python -m pip install pytest
+      - name: Check source and existing tests
+        run: python -m pytest tests -q
+      - name: Generate statistics from the pinned repository CSVs
+        run: python build.py
+      - name: Verify generated pages, OLS details, and data integrity
+        run: python -m pytest tests -q
+      - name: Commit verified generated results
+        shell: bash
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add -A site/data site/raw index.html
+          if git diff --cached --quiet; then
+            echo "Published statistical files are already current."
+            exit 0
+          fi
+          git commit -m "Refresh published statistics after source-integrity checks [skip ci]"
+          git push origin HEAD:main
