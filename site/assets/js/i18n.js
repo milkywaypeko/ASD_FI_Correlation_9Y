@@ -323,13 +323,18 @@
     button.type='button';
     button.textContent=name;
     button.dataset.language=code;
-    button.addEventListener('click',()=>setLanguage(code));
+    button.addEventListener('click',()=>setLanguage(code,true));
     switcher.append(button);
     buttons[code]=button;
   }
-  function setLanguage(code) {
+  function setLanguage(code,fromClick=false) {
     if (!['ko','en'].includes(code)) return;
     language=code;
+    if (fromClick && new URLSearchParams(location.search).has('lang')) {
+      const url=new URL(location.href);
+      url.searchParams.set('lang',code);
+      history.replaceState(history.state,'',url);
+    }
     try { localStorage.setItem(STORAGE_KEY,code); } catch { /* private browsing */ }
     document.documentElement.lang=code;
     document.documentElement.dataset.language=code;
