@@ -127,8 +127,8 @@ OLS는 패널 고정효과나 연도효과를 별도 통제하지 않습니다.*
 ## 데이터 재현성: 삭제해도 되는 폴더 / 안 되는 폴더
 
 **보존 필수:** `Statistics/`의 모든 2014–2022 원본 CSV와 자료 출처 기록,
-`build.py`·`expanded_analysis.py`·`unified_analysis.py`·
-`insurance_premiums.py`, `requirements.txt`, `site/`의 HTML/CSS/JS,
+`build.py`·`build.py`·`build.py`·
+`build.py`, `requirements.txt`, `site/`의 HTML/CSS/JS,
 `tests/`, `.github/`, `AGENTS.md`·`.agents/`, `.git/`.
 
 **삭제 후 다시 생성 가능:** `site/data/`, `site/raw/`,
@@ -184,9 +184,9 @@ python -m http.server 8000
 
 ```text
 build.py                   전체 분석 + 정적 사이트 생성
-expanded_analysis.py       인구·진료비 및 기존 분석
-insurance_premiums.py      보험료 정합성·세대수 결합
-unified_analysis.py        최종 6변수 및 6개 단순회귀 JSON 생성
+build.py       인구·진료비 및 기존 분석
+build.py      보험료 정합성·세대수 결합
+build.py        최종 6변수 및 6개 단순회귀 JSON 생성
 site/unified.html          통합 분석 화면
 site/index.html            기존 데이터 탐색 화면
 site/assets/js/sidebar.js  공통 사이드바
@@ -212,3 +212,20 @@ tests/                     기존·추가 분석 및 화면 계약 테스트
 
 장애인 등록인원 원본 17개는 [이전 연구 `milkywaypeko/ASD_FI_Correlation`](https://github.com/milkywaypeko/ASD_FI_Correlation)에서 사용한 **각 시도 「○○기본통계」 장애인 등록 표와 같은 KOSIS 표를 연도 범위만 달리하여 다시 추출**한 자료입니다. 기존 연구의 README에는 17개 시도의 KOSIS `orgId`/`tblId` 직접 링크와 2023.04.20 출처 기록이 남아 있습니다. 이번 연구는 원표의 2014–2022년 열을 사용합니다. 이는 옛 단일 연도 CSV를 그대로 복사했다는 뜻이 아니며, 통계표의 범위와 집계 기준은 지역별로 다를 수 있습니다. 정확한 17개 직접 인용 링크는 [KOSIS_SOURCES.md](KOSIS_SOURCES.md#시도별-장애인등록-kosis-원표-17개--이전-연구에서-이어진-자료-계보)에 정리했습니다.
 
+
+
+### 단일 Python 빌드 진입점
+
+정적 사이트 생성과 전체 통계 계산은 **`python build.py`** 한 파일로 실행합니다. 인구·의료비·보험료 전처리, 단순/다중 OLS, SciPy 상관분석, 통합 JSON 및 GitHub Pages 출력까지 `build.py`에 통합했습니다. 별도 분석용 Python 모듈은 필요하지 않습니다. 테스트는 `python -m pytest tests -q`로 실행합니다.
+
+
+### 빌드 성능 최적화
+
+GitHub Actions는 화면/번역/문서/테스트만 변경되면 전체 OLS 재계산을 건너뛰고 빠른 pytest 및 JavaScript 검사를 실행합니다. `build.py`, `requirements.txt`, `Statistics/` 원본 자료 또는 빌드 워크플로가 변경되면 **전체 통계 재생성 및 결과 검증**을 수행합니다. 수동 워크플로 실행도 항상 전체 재생성합니다. 이 최적화는 **PR 검증 시간**을 줄이며, GitHub Pages 배포 방식은 변경하지 않습니다.
+
+전체 빌드에서는 통합 회귀의 연도·광역별 입력을 미리 그룹화해 중복 필터링을 줄이고, 기존 분석/통합 분석 및 모델별 소요 시간을 출력합니다. OLS, SciPy 검정, 신뢰구간, 원본 관측치와 출력 형식은 유지됩니다. 실제 단축 시간은 GitHub Actions 로그에서 비교해야 합니다.
+
+
+### 중복 통계 생성 코드 정리
+
+현재 사용하는 장애유형별 단순회귀 및 6변수 다중회귀의 상세 결과는 통합 분석 생성기 `build_unified_analysis()`에서 생성합니다. 예전에 별도 장애유형별 모델 파일을 만들던 미사용 `_emit_disability_type_models()` 함수는 제거했습니다. 기존 개별 분석 화면이 참조하는 연도별·지역별 파일 생성기는 화면 호환성을 위해 유지합니다. 기존 분석 페이지를 통합 결과로 전환하기 전에는 해당 생성기를 삭제하지 않습니다.

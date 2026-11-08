@@ -13,8 +13,1017 @@ from pathlib import Path
 
 import numpy as np
 import statsmodels.api as sm
-from expanded_analysis import build_expanded_analysis
-from unified_analysis import build_unified_analysis
+
+
+# ===== Embedded former expanded_analysis.py =====
+def _namespace_expanded_analysis():
+    """Additional 2014–2022 demographic and medical-expense OLS models.
+    
+    The source statistics are read-only. All municipality joins use a full
+    (year, province, district) key; ward totals are combined only when a city
+    total is absent, and missing covariates are never imputed.
+    """
+    
+    import csv
+    import json
+    import math
+    import re
+    import warnings
+    from collections import defaultdict
+    from pathlib import Path
+    
+    import numpy as np
+    import statsmodels.api as sm
+    
+    YEARS = tuple(range(2014, 2023))
+    MODES = ("before", "after")
+    PROVINCES = (
+        "서울특별시", "부산광역시", "대구광역시", "인천광역시", "광주광역시",
+        "대전광역시", "울산광역시", "세종특별자치시", "경기도", "강원특별자치도",
+        "충청북도", "충청남도", "전북특별자치도", "전라남도", "경상북도",
+        "경상남도", "제주특별자치도",
+    )
+    ALIASES = {
+        "서울": "서울특별시", "부산": "부산광역시", "대구": "대구광역시",
+        "인천": "인천광역시", "광주": "광주광역시", "대전": "대전광역시",
+        "울산": "울산광역시", "세종": "세종특별자치시", "경기": "경기도",
+        "강원": "강원특별자치도", "충북": "충청북도", "충남": "충청남도",
+        "전북": "전북특별자치도", "전남": "전라남도", "경북": "경상북도",
+        "경남": "경상남도", "제주": "제주특별자치도",
+        "강원도": "강원특별자치도", "전라북도": "전북특별자치도",
+    }
+    SPECIAL = {"세종특별자치시", "제주특별자치도"}
+    AGE_VARIABLES = ("age65_percent", "under15_percent")
+    MEDICAL = "medical_10k_per_person"
+    LABELS = {
+        "before": "재정자립도(개편 전, 0~1)", "after": "재정자립도(개편 후, 0~1)",
+        "age65_percent": "65세 이상 인구비율(%)",
+        "under15_percent": "0~14세 인구비율(%)",
+        "fertility": "합계출산율(명/여성)",
+        MEDICAL: "1인당 진료비(만원)",
+    }
+    SIMPLE = {
+        "age65": "age65_percent",
+        "under15": "under15_percent",
+        "medical": MEDICAL,
+    }
+    
+    
+    def read_csv(path: Path) -> list[list[str]]:
+        for encoding in ("utf-8-sig", "cp949", "euc-kr"):
+            try:
+                with path.open(encoding=encoding, newline="") as handle:
+                    return list(csv.reader(handle))
+            except UnicodeDecodeError:
+                continue
+        raise ValueError(f"CSV 인코딩을 읽을 수 없습니다: {path}")
+    
+    
+    def number(value: str) -> float | None:
+        text = str(value or "").strip().replace(",", "")
+        if text in ("", "-", "…", "X", "x", "N/A"):
+            return None
+        try:
+            parsed = float(text)
+            return parsed if math.isfinite(parsed) else None
+        except ValueError:
+            return None
+    
+    
+    def province_name(text: str) -> str:
+        name = text.strip()
+        return ALIASES.get(name, name)
+    
+    
+    def district_name(province: str, value: str) -> str:
+        name = re.sub(r"\s*\([^)]*변동[^)]*\)\s*$", "", value.strip())
+        for prefix in ("충북 ", "경기 "):
+            if name.startswith(prefix):
+                name = name[len(prefix):]
+        if province == "인천광역시" and name == "남구":
+            return "미추홀구"
+        return province if province in SPECIAL else name
+    
+    
+    def year_columns(headers: list[str]) -> list[tuple[int, int]]:
+        found = []
+        for index, header in enumerate(headers):
+            match = re.match(r"^\s*(20\d{2})\s*(?:년)?\s*$", header)
+            if match and int(match.group(1)) in YEARS:
+                found.append((index, int(match.group(1))))
+        return found
+    
+    
+    def _parent_city(district: str) -> str | None:
+        """Identify city wards such as '청주시 상당구' without pooling ordinary 구."""
+        match = re.fullmatch(r"(\S+시)\s+\S+구", district)
+        return match.group(1) if match else None
+    
+    
+    def parse_age_population(path: Path):
+        """Return age-band statistics from official 5-year mid-year counts.
+    
+        Uses '계' sex only; 0–14 is 0–4 + 5–9 + 10–14 and 65+
+        is 65–69, 70–74, 75–79, 80–84, and 85+.
+        """
+        rows = read_csv(path)
+        columns = year_columns(rows[0])
+        if set(y for _, y in columns) != set(YEARS):
+            raise ValueError("5세별 연앙인구 파일의 2014~2022 열이 불완전합니다.")
+        bands = defaultdict(dict)
+        province = None
+        for row in rows[1:]:
+            if len(row) < 5 or row[1].strip() != "계":
+                continue
+            area = province_name(row[0])
+            if area == "전국":
+                continue
+            if area in PROVINCES:
+                province = area
+                district = area
+            elif province:
+                if province in SPECIAL:
+                    continue
+                district = district_name(province, row[0])
+            else:
+                continue
+            age_text = re.sub(r"\s+", "", row[2])
+            if age_text == "계":
+                age = "total"
+            else:
+                match = re.fullmatch(r"(\d+)-(\d+)세", age_text)
+                if match and int(match.group(2)) - int(match.group(1)) == 4:
+                    age = int(match.group(1))
+                elif re.fullmatch(r"85세이상", age_text):
+                    age = 85
+                else:
+                    continue
+            if age != "total" and age not in (*range(0, 85, 5), 85):
+                continue
+            for index, year in columns:
+                val = number(row[index] if index < len(row) else "")
+                if val is not None and val >= 0:
+                    bands[(year, province, district)][age] = val
+    
+        # For sources that only list city wards, construct the parent from disjoint wards.
+        parts = defaultdict(list)
+        for (year, prov, district), vals in bands.items():
+            parent = _parent_city(district)
+            if parent is not None:
+                parts[(year, prov, parent)].append(vals)
+        for key, members in parts.items():
+            if key in bands:
+                continue
+            combined = {}
+            for field in ("total", 0, 5, 10, 65, 70, 75, 80, 85):
+                if all(field in member for member in members):
+                    combined[field] = sum(member[field] for member in members)
+            bands[key] = combined
+    
+        result = {}
+        for key, values in bands.items():
+            population = values.get("total")
+            young = (sum(values[v] for v in (0, 5, 10))
+                     if all(v in values for v in (0, 5, 10)) else None)
+            elderly = (sum(values[v] for v in (65, 70, 75, 80, 85))
+                       if all(v in values for v in (65, 70, 75, 80, 85)) else None)
+            result[key] = {
+                "age_population": population,
+                "under15_percent": young / population * 100 if population and young is not None else None,
+                "age65_percent": elderly / population * 100 if population and elderly is not None else None,
+            }
+        return result
+    
+    
+    def parse_medical_expenses(folder: Path):
+        """Read three long-form and one multiheader wide-form treatment tables.
+    
+        Each selected value is '진료비 (천원)' for age '합계', not benefit cost
+        (급여비) and not cost per treated person (진료실인원수).
+        """
+        direct = {}
+        duplicates = []
+        paths = sorted(folder.glob("시군구*연령별 진료현황-전체.csv"))
+        if len(paths) != 4:
+            raise ValueError(f"의료비 통계 파일 4개가 필요합니다. 발견: {len(paths)}")
+        for path in paths:
+            rows = read_csv(path)
+            wide = len(rows) > 2 and rows[0][1].startswith("시군구별(2)")
+            if wide:
+                cols = [(index, year) for index, year in year_columns(rows[0])
+                        if rows[1][index].strip() == "합계"
+                        and "진료비" in rows[2][index].replace(" ", "")
+                        and "급여비" not in rows[2][index]]
+                if len(cols) != len(YEARS):
+                    raise ValueError(f"의료비 가로형 CSV 열 매핑 오류: {path}")
+                candidates = []
+                for row in rows[3:]:
+                    if len(row) < 2:
+                        continue
+                    province = province_name(row[0])
+                    if province not in PROVINCES:
+                        continue
+                    district = province if row[1].strip() in ("소계", "합계") else district_name(province, row[1])
+                    candidates.extend(((year, province, district), number(row[index]))
+                                      for index, year in cols if index < len(row))
+            else:
+                cols = year_columns(rows[0])
+                if len(cols) != len(YEARS):
+                    raise ValueError(f"의료비 세로형 CSV 열 매핑 오류: {path}")
+                candidates = []
+                province = None
+                for row in rows[1:]:
+                    if len(row) < 4 or row[1].strip() != "합계" or "진료비" not in row[2] or "급여비" in row[2]:
+                        continue
+                    area = province_name(row[0])
+                    if area in PROVINCES:
+                        province = area
+                        district = area
+                    elif province:
+                        if province in SPECIAL:
+                            continue
+                        district = district_name(province, row[0])
+                    else:
+                        continue
+                    candidates.extend(((year, province, district), number(row[index]))
+                                      for index, year in cols if index < len(row))
+            for key, value in candidates:
+                if value is None or value < 0:
+                    continue
+                if key in direct and not math.isclose(direct[key], value):
+                    duplicates.append({"key": list(key), "first": direct[key], "next": value})
+                    continue
+                direct[key] = value
+    
+        # Parent municipality entries take precedence; ward costs are summed only
+        # when the parent city is absent. This avoids double-counting city totals.
+        parts = defaultdict(list)
+        for (year, prov, district), cost in direct.items():
+            parent = _parent_city(district)
+            if parent:
+                parts[(year, prov, parent)].append(cost)
+        for key, values in parts.items():
+            if key not in direct:
+                direct[key] = sum(values)
+        return direct, duplicates
+    
+    
+    def _finite(value):
+        return round(float(value), 12) if value is not None and math.isfinite(float(value)) else None
+    
+    
+    def fit_extended_ols(rows: list[dict], predictors: tuple[str, ...],
+                         scope: str, region: str, year: int | str, mode: str | None = None,
+                         dtype: str = "전체"):
+        """Complete-case OLS with a constant, rank check, and explicit warnings."""
+        valid = [r for r in rows if r.get("rates", {}).get(dtype) is not None
+                 and all(r.get(field) is not None and math.isfinite(float(r[field])) for field in predictors)]
+        k = len(predictors)
+        result = {
+            "scope": scope, "region": region, "year": year, "mode": mode,
+            "type": dtype, "n": len(valid), "predictors": list(predictors),
+            "intercept": None, "coefficients": {}, "r2": None, "adj_r2": None,
+            "p_model": None, "warning": None, "raw": None,
+        }
+        if len(valid) < k + 2:
+            result["warning"] = f"회귀에 필요한 완전 관측치가 부족합니다 (최소 {k + 2}개)."
+            return result
+        x = np.asarray([[float(r[field]) for field in predictors] for r in valid])
+        y = np.asarray([float(r["rates"][dtype]) for r in valid])
+        if not np.isfinite(y).all():
+            result["warning"] = "종속변수에 유효하지 않은 수치가 있습니다."
+            return result
+        design = sm.add_constant(x, has_constant="add")
+        if np.linalg.matrix_rank(design) != k + 1:
+            result["warning"] = "독립변수에 상수 또는 완전한 선형종속이 존재합니다."
+            return result
+        try:
+            with warnings.catch_warnings():
+                warnings.simplefilter("ignore")
+                model = sm.OLS(y, design).fit()
+                raw = str(model.summary(xname=["const"] + [field.replace("before","fiscal_before").replace("after","fiscal_after") for field in predictors]))
+            ci = model.conf_int(alpha=.05)
+            coefficients = {
+                field: {
+                    "coef": _finite(model.params[i + 1]),
+                    "p": float(model.pvalues[i + 1]) if math.isfinite(float(model.pvalues[i + 1])) else None,
+                    "ci": [_finite(ci[i + 1, 0]), _finite(ci[i + 1, 1])],
+                    "se": _finite(model.bse[i + 1]),
+                }
+                for i, field in enumerate(predictors)
+            }
+            result.update(intercept=_finite(model.params[0]),
+                          coefficients=coefficients, r2=_finite(model.rsquared),
+                          adj_r2=_finite(model.rsquared_adj),
+                          p_model=float(model.f_pvalue) if math.isfinite(float(model.f_pvalue)) else None,
+                          raw=raw)
+        except (ValueError, np.linalg.LinAlgError) as exc:
+            result["warning"] = f"OLS 계산 실패: {exc}"
+        return result
+    
+    
+    def _write_json(path: Path, value):
+        path.parent.mkdir(parents=True, exist_ok=True)
+        path.write_text(json.dumps(value, ensure_ascii=False, separators=(",", ":"), allow_nan=False), encoding="utf-8")
+    
+    
+    def _emit_models(out: Path, prefix: str, detail: list[dict], provinces: list[dict],
+                     predictors: tuple[str, ...], fiscal_mode: bool):
+        """Create the same annual / pooled / local-history scopes as the existing UI."""
+        def models(rows, prov_rows, year, mode=None):
+            output = [fit_extended_ols(rows, predictors_for(mode), "municipal", "전국", year, mode)]
+            for province in PROVINCES:
+                subset = [r for r in rows if r["province"] == province]
+                output.append(fit_extended_ols(subset, predictors_for(mode), "municipal", province, year, mode))
+            output.append(fit_extended_ols(prov_rows, predictors_for(mode), "provincial", "전국", year, mode))
+            return output
+    
+        def predictors_for(mode):
+            return ((mode,) + predictors) if fiscal_mode else predictors
+    
+        analysis_years = (tuple(range(2015, 2023))
+                          if prefix in ("medical_ols_models", "household_premium_ols_models")
+                          else YEARS)
+        permitted = set(analysis_years)
+        by_local = defaultdict(list)
+        for row in detail:
+            if row["year"] in permitted:
+                by_local[(row["province"], row["district"])].append(row)
+        total = 0
+        for year in analysis_years:
+            rows = [r for r in detail if r["year"] == year]
+            prov_rows = [r for r in provinces if r["year"] == year]
+            for mode in (MODES if fiscal_mode else (None,)):
+                group = models(rows, prov_rows, year, mode)
+                suffix = f"_{mode}" if mode else ""
+                _write_json(out / "data" / f"{prefix}_{year}{suffix}.json", group)
+                total += len(group)
+    
+        pooled, history = [], []
+        for mode in (MODES if fiscal_mode else (None,)):
+            pooled.extend(models([r for r in detail if r["year"] in permitted],
+                                 [r for r in provinces if r["year"] in permitted],
+                                 "전기간", mode))
+            for (prov, district), rows in sorted(by_local.items()):
+                history.append(fit_extended_ols(rows, predictors_for(mode),
+                                                "local_history", prov + "|" + district,
+                                                "전기간", mode))
+        _write_json(out / "data" / f"{prefix}_pooled.json", pooled)
+        _write_json(out / "data" / f"{prefix}_local_history.json", history)
+        return {"yearly_models": total, "pooled_models": len(pooled),
+                "local_history_models": len(history),
+                "estimated_models": sum(m["intercept"] is not None for m in pooled + history)}
+    
+    
+    
+    # Retired per-disability shard generator removed: unified_analysis now
+    # creates the sole active per-type regression index and detail files.
+
+    def build_expanded_analysis(stats: Path, out: Path, detail: list[dict],
+                                province_rows: list[dict], disability_types: list[str] | None = None):
+        """Enrich observation rows in-place and write requested model sets.
+    
+        Run after build_multivariate(), so its fertility field has already joined.
+        Must run before municipalities.json and provinces.json are written.
+        """
+        age = parse_age_population(stats / "인구" / "연령(5세)별 주민등록연앙인구.csv")
+        costs, duplicates = parse_medical_expenses(stats / "국가건강정보" / "진료비")
+        premiums, premium_invalid = parse_insurance_premiums(stats / "국가건강정보" / "보험료")
+        household_file = stats / HOUSEHOLD_FILE
+        households = parse_household_counts(household_file)
+        all_rows = detail + province_rows
+        for row in all_rows:
+            key = (row["year"], row["province"], row["district"])
+            age_values = age.get(key, {})
+            for field in ("age_population", "age65_percent", "under15_percent"):
+                row[field] = _finite(age_values.get(field))
+            medical_cost = costs.get(key)
+            population = age_values.get("age_population")
+            row["medical_total_thousand_krw"] = medical_cost
+            row[MEDICAL] = _finite(medical_cost / (10.0 * population)) if (
+                medical_cost is not None and population is not None and population > 0) else None
+            premium = premiums.get(key)
+            household_count = households.get(key)
+            row["premium_total_thousand_krw"] = premium
+            row["households"] = household_count
+            row[PREMIUM_FIELD] = household_premium_10k(premium, household_count)
+    
+        # Keep partial provincial disability aggregations from being treated as
+        # complete observations in the new type-filtered models and plots.
+        disability_types = disability_types or ["전체"]
+        municipalities_by_province = defaultdict(list)
+        for row in detail:
+            municipalities_by_province[(row["year"], row["province"])].append(row)
+        for row in province_rows:
+            members = municipalities_by_province[(row["year"], row["province"])]
+            row["complete_types"] = [dtype for dtype in disability_types
+                                     if members and all(dtype in m["rates"] for m in members)]
+    
+        checks = ("age65_percent", "under15_percent", "fertility", MEDICAL, PREMIUM_FIELD)
+        audit = {
+            "years": list(YEARS),
+            "sources": ["Statistics/인구/연령(5세)별 주민등록연앙인구.csv",
+                        "Statistics/국가건강정보/진료비/시군구(...)별 연령별 진료현황-전체.csv",
+                        "Statistics/국가건강정보/보험료/시군구(...)별 보험료 현황.csv"],
+            "denominators": "0~14세·65세 이상 비율의 분모와 의료비 1인당 분모는 해당 연도 주민등록연앙인구(계).",
+            "medical_definition": "전체 연령 진료비(천원) × 1000 ÷ 주민등록연앙인구 ÷ 10000 = 만원/인. 급여비·진료인원수 아님.",
+            "outcome": "등록 장애인 총수 / 해당 연도 기존 주민등록인구 × 100 (%)",
+            "caveat": "동시기 지역 수준의 탐색적 OLS로 인과효과를 의미하지 않음. 연도 통합은 지역 반복측정과 연도효과를 통제하지 않음. 진료비에 비급여가 전부 포함된다는 뜻이 아님.",
+            "source_duplicates": duplicates[:50],
+            "premium_source_invalid": premium_invalid[:300],
+            "premium_source_invalid_count": len(premium_invalid),
+            "premium_sources_2014_invalid_note": "2014년 서울·인천·경기·강원 표의 보험료 5항목 합계 불일치 자료는 진료비 혼입으로 판단하여 제외. 원본은 보존함.",
+            "premium_total_available": len(premiums),
+            "household_file": str(HOUSEHOLD_FILE),
+            "household_available": len(households),
+            "premium_definition": "연간 건강보험료 총액(천원) ÷ 주민등록세대수 ÷ 10 = 만원/세대/년. 직장+지역 전체(가입자 및 사용자 부담 포함 가능). 보험가입 세대별 실제 고지액이 아님.",
+            "premium_missing_households_warning": (None if households else
+                "주민등록세대수.csv가 없어 모든 가구당 보험료 회귀가 추정 불가입니다. 수치를 임의 추정하지 않습니다."),
+            "municipal_total": len(detail),
+            "province_total": len(province_rows),
+            "municipal_by_variable": {field: sum(r.get(field) is not None for r in detail) for field in checks},
+            "province_by_variable": {field: sum(r.get(field) is not None for r in province_rows) for field in checks},
+            "municipal_complete_cases": {mode: sum(
+                all(r.get(field) is not None for field in (mode, *checks)) for r in detail) for mode in MODES},
+            "province_complete_cases": {mode: sum(
+                all(r.get(field) is not None for field in (mode, *checks)) for r in province_rows) for mode in MODES},
+            "missing_municipal_sample": [
+                {"year": r["year"], "province": r["province"], "district": r["district"],
+                 "fields": [field for field in checks if r.get(field) is None]}
+                for r in detail if any(r.get(field) is None for field in checks)
+            ][:100],
+        }
+        # Legacy five-variable and duplicate six-variable generations are retired.
+        # The seven current models (all disability types) share the unified builder.
+        for label, field in SIMPLE.items():
+            audit[label] = _emit_models(out, f"{label}_ols_models", detail, province_rows, (field,), False)
+        audit["household_premium_ols"] = _emit_models(
+            out, "household_premium_ols_models", detail, province_rows,
+            (PREMIUM_FIELD,), False)
+        audit["type_regression_note"] = (
+            "청각·언어는 경기도 2014~2017년 통합 집계만 사용; "
+            "청각/언어로 분리하거나 결측을 0으로 대체하지 않음. "
+            "광역 장애유형별 등록률은 모든 하위 지역의 유형 자료가 있을 때만 사용.")
+        _write_json(out / "data" / "age_medical_quality.json", audit)
+        print("인구구조·의료비 추가 분석:", json.dumps(
+            {key: audit[key] for key in ("municipal_by_variable", "municipal_complete_cases", "age65", "under15", "medical")}, ensure_ascii=False), flush=True)
+        return audit
+    return locals()
+
+_expanded_analysis = _namespace_expanded_analysis()
+
+# Export the expanded helpers for downstream sections and unit tests.
+globals().update({key: value for key, value in _expanded_analysis.items() if not key.startswith('__')})
+
+# ===== Embedded former insurance_premiums.py =====
+def _namespace_insurance_premiums():
+    PROVINCES = _expanded_analysis['PROVINCES']
+    province_name = _expanded_analysis['province_name']
+    district_name = _expanded_analysis['district_name']
+    number = _expanded_analysis['number']
+    YEARS = _expanded_analysis['YEARS']
+    _parent_city = _expanded_analysis['_parent_city']
+    """Insurance premium totals and *observed* household denominators.
+    
+    Never divide by population, patients, or assumed persons per household: doing so
+    would change the estimand. The optional household-count CSV is required for
+    premium-per-household regression and is documented in Statistics/README.md.
+    """
+    import csv
+    import math
+    import re
+    from collections import defaultdict
+    from pathlib import Path
+    
+    PREMIUM_FIELD = "premium_10k_per_household"
+    PREMIUM_FILE_PATTERN = "시군구*별 보험료 현황.csv"
+    HOUSEHOLD_FILE = Path("인구/행정구역(시군구)별 주민등록세대수.csv")
+    
+    
+    def _rows(path: Path):
+        for encoding in ("utf-8-sig", "cp949", "euc-kr"):
+            try:
+                with path.open(newline="", encoding=encoding) as f:
+                    return list(csv.reader(f))
+            except UnicodeDecodeError:
+                continue
+        raise ValueError(f"잘못된 CSV 인코딩: {path}")
+    
+    
+    def _year_header_index(row: list[str]):
+        return [(i, int(match.group(1))) for i, value in enumerate(row)
+                if (match := re.fullmatch(r"\s*(20\d{2})\s*(?:년)?\s*", value))
+                and int(match.group(1)) in YEARS]
+    
+    
+    def _comparable(a: float, b: float) -> bool:
+        # Source values can be rounded to the nearest thousand KRW.
+        return abs(a - b) <= max(3.0, 1e-8 * max(abs(a), abs(b)))
+    
+    
+    def parse_insurance_premiums(folder: Path):
+        """Read four NHIS annual total-premium files (unit: *thousand KRW*).
+    
+        A 5-column block for a given year represents total, workplace total,
+        employee, public/teacher and regional total, respectively. Check the
+        accounting identities before trusting any row. This catches the user-
+        supplied Seoul/Incheon/Gyeonggi/Gangwon 2014 block, which is mis-sourced.
+        """
+        values = {}
+        invalid = []
+        paths = sorted(folder.glob(PREMIUM_FILE_PATTERN))
+        if len(paths) != 4:
+            raise ValueError(f"가구 건강보험료 CSV 4개가 필요합니다: 발견 {len(paths)} ({folder})")
+        for path in paths:
+            rows = _rows(path)
+            if len(rows) < 4 or len(rows[0]) != len(rows[1]) or len(rows[1]) != len(rows[2]):
+                raise ValueError(f"건강보험료 CSV 표 머리글 오류: {path}")
+            blocks = []
+            for year in YEARS:
+                cols = [i for i, y in _year_header_index(rows[0]) if y == year]
+                expected = [("합계", "소계"), ("직장", "소계"),
+                            ("직장", "근로자"), ("직장", "공·교"), ("지역", "소계")]
+                if len(cols) != 5 or [(rows[1][i].strip(), rows[2][i].strip()) for i in cols] != expected:
+                    raise ValueError(f"건강보험료 헤더 연도별 5개 항목 불일치: {path} {year}")
+                blocks.append((year, cols))
+            for row in rows[3:]:
+                if not row or len(row) < len(rows[0]):
+                    continue
+                prov = province_name(row[0])
+                if prov not in PROVINCES:
+                    continue
+                # Jeju/Sejong parent subtotal is the dashboard's only comparable unit.
+                # Do not duplicate that subtotal with the administrative city rows.
+                if prov in ("제주특별자치도", "세종특별자치시") and row[1].strip() not in ("소계", "합계"):
+                    continue
+                district = prov if row[1].strip() in ("소계", "합계") else district_name(prov, row[1])
+                for year, cols in blocks:
+                    nums = [number(row[i]) for i in cols]
+                    if any(x is None or x < 0 for x in nums):
+                        continue
+                    total, workplace, employee, public, regional = nums
+                    if (not _comparable(total, workplace + regional) or
+                        not _comparable(workplace, employee + public)):
+                        invalid.append({"year": year, "province": prov, "district": district,
+                                        "source": path.name, "reason": "보험료 합계 ≠ 직장+지역 / 직장 ≠ 근로자+공·교"})
+                        continue
+                    key = (year, prov, district)
+                    if key in values and not _comparable(values[key], total):
+                        invalid.append({"year": year, "province": prov, "district": district,
+                                        "source": path.name, "reason": "중복 관측치 불일치"})
+                        continue
+                    values[key] = total
+        # If a city total exists, never add its wards on top. Otherwise combine wards.
+        wards = defaultdict(list)
+        for (year, prov, district), amount in values.items():
+            parent = _parent_city(district)
+            if parent:
+                wards[(year, prov, parent)].append(amount)
+        for key, amounts in wards.items():
+            if key not in values:
+                values[key] = sum(amounts)
+        return values, invalid
+    
+    
+    def parse_household_counts(path: Path):
+        """Parse positive registered household counts; supports long and KOSIS-wide CSV.
+    
+        Accepted long columns: 연도,시도,시군구,세대수 (exact values, NOT household size).
+        Accepted wide: region then 2014..2022 columns, optional year-metric header.
+        A missing file produces no households and no insurance estimates.
+        """
+        if not path.exists():
+            return {}
+        rows = _rows(path)
+        if not rows:
+            return {}
+        header = [x.strip().lstrip("\ufeff") for x in rows[0]]
+        out = {}
+        if {"연도", "시도", "시군구", "세대수"} <= set(header):
+            fields = {name: header.index(name) for name in ("연도", "시도", "시군구", "세대수")}
+            source = [{name: row[idx] for name, idx in fields.items()} for row in rows[1:]
+                      if len(row) > max(fields.values())]
+            for row in source:
+                if not row["연도"].strip().isdigit():
+                    continue
+                year = int(row["연도"].strip())
+                if year not in YEARS:
+                    continue
+                prov = province_name(row["시도"])
+                if prov not in PROVINCES:
+                    continue
+                raw_district = row["시군구"].strip()
+                district = (prov if raw_district in ("전체", "계", "합계", "소계", prov)
+                            else district_name(prov, raw_district))
+                val = number(row["세대수"])
+                if val is None or val <= 0 or not val.is_integer():
+                    continue
+                key = (year, prov, district)
+                if key in out and out[key] != int(val):
+                    raise ValueError(f"주민등록세대수 중복 충돌: {key}")
+                out[key] = int(val)
+        else:
+            years = _year_header_index(header)
+            if not years:
+                raise ValueError("세대수 CSV 형식이 잘못되었습니다. 연도,시도,시군구,세대수 열이 필요합니다.")
+            province = None
+            parent_city = None  # Source sometimes lists ward rows directly after a city subtotal.
+            start = 1
+            two_locations = len(header)>1 and ("별(2)" in header[1] or header[1] in ("시군구", "행정구역(2)"))
+            if len(rows) > 1 and any("세대" in x for x in rows[1][1:]):
+                # Multiple KOSIS measures per year: use only explicit household counts.
+                years = [(i, y) for i, y in years if i < len(rows[1])
+                         and ("세대수" in rows[1][i] or "총세대" in rows[1][i])]
+                if not years:
+                    raise ValueError("세대수에 해당하는 연도별 열이 없습니다.")
+                start = 2
+            for row in rows[start:]:
+                if not row:
+                    continue
+                area = province_name(row[0])
+                if area == "전국":
+                    continue
+                if two_locations:
+                    if area not in PROVINCES or len(row) < 2:
+                        continue
+                    province = area
+                    local = row[1].strip()
+                    if province in ("세종특별자치시", "제주특별자치도") and local not in ("소계", "합계", "계", "전체"):
+                        continue
+                    district = (province if local in ("소계", "합계", "계", "전체")
+                                else district_name(province, local))
+                elif area in PROVINCES:
+                    province = area
+                    district = area
+                    parent_city = None
+                elif province:
+                    if province in ("세종특별자치시", "제주특별자치도"):
+                        continue
+                    district = district_name(province, row[0])
+                    if district.endswith("시"):
+                        # City total already exists; its following ward rows are not
+                        # separate municipality observations and must not be pooled.
+                        parent_city = district
+                    elif district.endswith("군"):
+                        parent_city = None
+                    elif district.endswith("구") and parent_city is not None:
+                        # E.g. Bucheon lists its wards (including duplicated 오정구).
+                        # City-level household count above is authoritative.
+                        continue
+                else:
+                    continue
+                for index, year in years:
+                    val = number(row[index] if index < len(row) else "")
+                    if val is not None and val > 0 and val.is_integer():
+                        key = (year, province, district)
+                        if key in out and out[key] != int(val):
+                            raise ValueError(f"주민등록세대수 중복 충돌: {key}")
+                        out[key] = int(val)
+        # Aggregate child wards only when the source lacks its city-level count.
+        wards = defaultdict(list)
+        for (year, prov, district), n in out.items():
+            parent = _parent_city(district)
+            if parent:
+                wards[(year, prov, parent)].append(n)
+        for key, vals in wards.items():
+            if key not in out:
+                out[key] = sum(vals)
+        return out
+    
+    
+    def household_premium_10k(total_thousand_krw, households):
+        """Annual insurance premium in units 10,000 KRW per *registered household*."""
+        if total_thousand_krw is None or households is None or households <= 0:
+            return None
+        return round(total_thousand_krw / (10 * households), 12)
+    return locals()
+
+_insurance_premiums = _namespace_insurance_premiums()
+
+globals().update({key: value for key, value in _insurance_premiums.items() if not key.startswith('__')})
+
+# ===== Embedded former unified_analysis.py =====
+def _namespace_unified_analysis():
+    PROVINCES = _expanded_analysis['PROVINCES']
+    fit_extended_ols = _expanded_analysis['fit_extended_ols']
+    """Unified, reproducible statsmodels OLS index and lazy details.
+    
+    The same fitted model supplies index statistics, its unabridged summary(),
+    and exact complete-case observations with predictions and residuals.
+    Original Statistics CSV files are never modified.
+    """
+    
+    from collections import defaultdict
+    from pathlib import Path
+    import gzip
+    import json
+    import math
+    import shutil
+    import warnings
+    
+    import scipy
+    from scipy.stats import pearsonr
+    
+    
+    HEALTH_YEARS = tuple(range(2015, 2023))
+    ALL_YEARS = tuple(range(2014, 2023))
+    LABELS = {
+        "before": "재정자립도(개편 전, 0~1)",
+        "after": "재정자립도(개편 후, 0~1)",
+        "age65_percent": "65세 이상 주민등록연앙인구 비율(%)",
+        "under15_percent": "0~14세 주민등록연앙인구 비율(%)",
+        "fertility": "합계출산율(명/여성)",
+        "medical_10k_per_person": "1인당 진료비(만원/인/년)",
+        "premium_10k_per_household": "가구당 건강보험료(만원/세대/년)",
+    }
+    # The fiscal explanatory variable is selected from the two published series.
+    SPECS = {
+        "six": {"fields": ("age65_percent", "under15_percent", "fertility",
+                           "medical_10k_per_person", "premium_10k_per_household"),
+                "fiscal": True, "years": HEALTH_YEARS, "label": "최종 6변수 다중회귀"},
+        "age65": {"fields": ("age65_percent",), "fiscal": False,
+                  "years": ALL_YEARS, "label": "65세 이상 인구비율 단순회귀"},
+        "under15": {"fields": ("under15_percent",), "fiscal": False,
+                    "years": ALL_YEARS, "label": "0~14세 인구비율 단순회귀"},
+        "medical": {"fields": ("medical_10k_per_person",), "fiscal": False,
+                    "years": HEALTH_YEARS, "label": "1인당 진료비 단순회귀"},
+        "premium": {"fields": ("premium_10k_per_household",), "fiscal": False,
+                    "years": HEALTH_YEARS, "label": "가구당 건강보험료 단순회귀"},
+        "fertility": {"fields": ("fertility",), "fiscal": False,
+                      "years": ALL_YEARS, "label": "합계출산율 단순회귀"},
+        "fiscal": {"fields": (), "fiscal": True,
+                   "years": ALL_YEARS, "label": "재정자립도 단순회귀"},
+    }
+    
+    
+    def _save(path: Path, value):
+        """Byte-preserving compact JSON or deterministic gzip (no statistical rounding)."""
+        path.parent.mkdir(parents=True, exist_ok=True)
+        data = json.dumps(value, ensure_ascii=False, separators=(",", ":"),
+                          allow_nan=False).encode("utf-8")
+        if path.suffix == ".gz":
+            path.write_bytes(gzip.compress(data, compresslevel=6, mtime=0))
+        else:
+            path.write_bytes(data)
+    
+    
+    def _finite(value):
+        return value is not None and math.isfinite(float(value))
+    
+    
+    def _complete_cases(rows, dtype, fields):
+        return [
+            row for row in rows
+            if _finite(row.get("rates", {}).get(dtype))
+            and all(_finite(row.get(field)) for field in fields)
+        ]
+    
+    
+    
+    def _number_or_none(value):
+        """Convert numeric SciPy values to JSON-safe numbers, never impute zero."""
+        try:
+            converted = float(value)
+            return converted if math.isfinite(converted) else None
+        except (TypeError, ValueError):
+            return None
+    
+    
+    def _scipy_pearson_result(xs, ys):
+        """Actual two-sided scipy.stats.pearsonr and its raw return object.
+    
+        Inputs are the *identical* model complete-case sample used by OLS.
+        A undefined r, p or interval stays null; observed pairs are retained
+        separately in detail["observations"] and are never modified.
+        """
+        n = len(xs)
+        result = {
+            "method": "scipy.stats.pearsonr",
+            "n": n,
+            "alternative": "two-sided",
+            "statistic": None,
+            "pvalue": None,
+            "confidence_level": 0.95,
+            "confidence_interval": {"low": None, "high": None},
+            "raw": None,
+            "raw_confidence_interval": None,
+            "warnings": [],
+            "reason": None,
+        }
+        if n != len(ys):
+            raise AssertionError("SciPy X/Y paired sample lengths differ")
+        if n < 2:
+            result["reason"] = "표본 n<2: 피어슨 상관계수 계산 불가"
+            return result
+        if all(x == xs[0] for x in xs) or all(y == ys[0] for y in ys):
+            result["reason"] = "X 또는 Y가 상수: 피어슨 상관계수 정의되지 않음"
+            return result
+        with warnings.catch_warnings(record=True) as caught:
+            warnings.simplefilter("always")
+            raw = pearsonr(xs, ys, alternative="two-sided")
+            interval = raw.confidence_interval(confidence_level=0.95)
+        result["raw"] = repr(raw)
+        result["raw_confidence_interval"] = repr(interval)
+        result["statistic"] = _number_or_none(raw.statistic)
+        result["pvalue"] = _number_or_none(raw.pvalue)
+        result["confidence_interval"] = {
+            "low": _number_or_none(interval.low),
+            "high": _number_or_none(interval.high),
+        }
+        result["warnings"] = [str(item.message) for item in caught]
+        if result["statistic"] is None:
+            result["reason"] = "SciPy가 정의되지 않은 r을 반환함"
+        elif result["pvalue"] is None:
+            result["reason"] = "SciPy가 유효하지 않은 p값을 반환함"
+        if result["confidence_interval"]["low"] is None:
+            result["warnings"].append("표본이 작아 95% 신뢰구간을 계산할 수 없음")
+        return result
+    
+    
+    def _pearson_correlation(xs, ys):
+        """Compatibility wrapper; the statistic now comes only from SciPy."""
+        return _scipy_pearson_result(xs, ys)["statistic"]
+    
+    
+    def _fit(rows, dtype, fields, scope, region, period, fiscal_mode):
+        # Provincial disability totals are valid only if every component locality
+        # reported that type. Unreported categories must never become zero.
+        if scope == "provincial":
+            rows = [r for r in rows if dtype in r.get("complete_types", [])]
+        complete = _complete_cases(rows, dtype, fields)
+        model = fit_extended_ols(
+            rows, fields, scope, region, period, fiscal_mode, dtype
+        )
+        if model["n"] != len(complete):
+            raise AssertionError("OLS complete-case count does not match audit rows")
+        # Marginal X-Y Pearson r for each predictor, evaluated on exactly the
+        # same complete cases as the corresponding six-variable or simple OLS.
+        # These are NOT partial correlations and are not inferred from R².
+        y_values = [float(row["rates"][dtype]) for row in complete]
+        scipy_results = [
+            _scipy_pearson_result(
+                [float(row[field]) for row in complete], y_values
+            ) for field in fields
+        ]
+        correlations = [entry["statistic"] for entry in scipy_results]
+        observations = []
+        for row in complete:
+            actual = float(row["rates"][dtype])
+            xs = [float(row[field]) for field in fields]
+            fitted = (
+                float(model["intercept"]) +
+                sum(float(model["coefficients"][field]["coef"]) * x
+                    for field, x in zip(fields, xs))
+                if model["intercept"] is not None else None
+            )
+            residual = actual - fitted if fitted is not None else None
+            observations.append([row["year"], row["province"], row["district"],
+                                 actual, *xs, fitted, residual])
+        record = {
+            "scope": scope, "region": region, "year": period,
+            "type": dtype, "mode": fiscal_mode, "n": model["n"],
+            "intercept": model["intercept"], "r2": model["r2"],
+            "adj_r2": model["adj_r2"], "p_model": model["p_model"],
+            "coefficients": [model["coefficients"].get(f, {}).get("coef") for f in fields],
+            "pvalues": [model["coefficients"].get(f, {}).get("p") for f in fields],
+            "correlations": correlations,
+            "correlation_pvalues": [entry["pvalue"] for entry in scipy_results],
+            "warning": model["warning"],
+        }
+        detail = {
+            "model": model,
+            "correlations": {
+                "method": "pearson",
+                "library": "scipy.stats.pearsonr",
+                "scipy_version": scipy.__version__,
+                "alternative": "two-sided",
+                "sample_n": len(complete),
+                "predictors": dict(zip(fields, correlations)),
+                "scipy": dict(zip(fields, scipy_results)),
+            },
+            "columns": ["year", "province", "district", "registered_rate_percent",
+                        *fields, "prediction_percent", "residual_percentage_points"],
+            "observations": observations,
+            "notes": {
+                "outcome": "해당 장애유형 등록인원 ÷ 해당 연도·지역 주민등록인구 × 100 (%)",
+                "prediction": "동일 statsmodels OLS 모형으로 계산한 관측치별 적합값",
+                "inference": "통계적 연관성만 분석하며 인과관계를 입증하지 않습니다.",
+                "correlation": "피어슨 r, 양측 p값, 95% Fisher 신뢰구간은 scipy.stats.pearsonr에서 반환됩니다. 모형에 사용된 동일 완전관측치의 Y와 각 X 간 비가중 이변량 상관이며 편상관이나 다중회귀 β가 아닙니다. n<2 또는 상수 변수인 경우 null; 표본 n<=3이면 신뢰구간이 정의되지 않을 수 있습니다.",
+            },
+        }
+        return record, detail
+    
+    
+    def build_unified_analysis(out: Path, detail: list[dict],
+                               provinces: list[dict], types: list[str]):
+        """Emit seven regressions, all types/scopes, light indexes and lazy details."""
+        results = {}
+        # Build to a reproducible site even when the prior uncompressed 1,258
+        # shards are present. Never touch Statistics/ raw CSVs.
+        data_dir = out / "data"
+        shutil.rmtree(data_dir / "unified_detail", ignore_errors=True)
+        for old in data_dir.glob("unified_index_*.json*"):
+            old.unlink()
+        province_groups = defaultdict(list)
+        local_groups = defaultdict(list)
+        province_aggregate_groups = defaultdict(list)
+        for row in detail:
+            province_groups[row["province"]].append(row)
+            local_groups[(row["province"], row["district"])].append(row)
+        for row in provinces:
+            province_aggregate_groups[row["province"]].append(row)
+    
+        import time
+        for key, spec in SPECS.items():
+            started = time.perf_counter()
+            allowed = set(spec["years"])
+            annual = {y: [r for r in detail if r["year"] == y] for y in spec["years"]}
+            annual_prov = {y: [r for r in provinces if r["year"] == y] for y in spec["years"]}
+            pooled = [r for r in detail if r["year"] in allowed]
+            pooled_prov = [r for r in provinces if r["year"] in allowed]
+            history = {region: [r for r in rows if r["year"] in allowed]
+                       for region, rows in local_groups.items()}
+            grouped_periods = {}
+            for period in (*spec["years"], "pooled"):
+                subset = pooled if period == "pooled" else annual[period]
+                grouped = defaultdict(list)
+                for row in subset:
+                    grouped[row["province"]].append(row)
+                grouped_periods[period] = grouped
+            history_scopes = [("local_history", prov + "|" + dist, rows)
+                              for (prov, dist), rows in sorted(history.items())]
+            index = []
+            total_fitted = 0
+            for type_index, dtype in enumerate(types):
+                # Group one disability type into a single compressed asset.
+                # 119 files replace 1,258 tiny per-period JSON documents; detail
+                # stays lazy and all original statsmodels summaries remain exact.
+                shard = f"data/unified_detail/{key}/{type_index:02d}.json.gz"
+                payload = {}
+                for period in (*spec["years"], "pooled", "history"):
+                    if period == "history":
+                        scopes = history_scopes
+                        model_period = "전기간"
+                    else:
+                        subset = pooled if period == "pooled" else annual[period]
+                        subset_prov = pooled_prov if period == "pooled" else annual_prov[period]
+                        # Build province partitions once per period rather than
+                        # rescanning all rows for every disability type.
+                        groups = grouped_periods[period]
+                        scopes = [("municipal", "전국", subset)]
+                        scopes.extend(("municipal", province, groups[province])
+                                      for province in PROVINCES)
+                        scopes.append(("provincial", "전국", subset_prov))
+                        model_period = "전기간" if period == "pooled" else period
+                    for mode in (("before", "after") if spec["fiscal"] else (None,)):
+                        fields = ((mode,) + spec["fields"] if mode else spec["fields"])
+                        for scope, region, rows in scopes:
+                            item, full = _fit(
+                                rows, dtype, fields, scope, region, model_period, mode
+                            )
+                            ident = str(len(index))
+                            item.update(id=ident, shard=shard)
+                            index.append(item)
+                            payload[ident] = full
+                            if item["intercept"] is not None:
+                                total_fitted += 1
+                _save(out / shard, payload)
+            _save(out / "data" / f"unified_index_{key}.json.gz", index)
+            results[key] = {
+                "models": len(index), "fitted": total_fitted,
+                "years": list(spec["years"]), "label": spec["label"],
+            }
+            print("통합 OLS", key, results[key], f"elapsed={time.perf_counter()-started:.1f}s", flush=True)
+    
+        _save(out / "data" / "unified_manifest.json", {
+            "types": types, "provinces": PROVINCES,
+            "labels": LABELS,
+            "models": {
+                key: {"label": cfg["label"], "years": list(cfg["years"]),
+                      "fiscal": cfg["fiscal"], "fields": list(cfg["fields"])}
+                for key, cfg in SPECS.items()
+            },
+            "limitations": [
+                "피어슨 r, 양측검정 p값, 95% 신뢰구간은 scipy.stats.pearsonr로 동일 완전관측치에서 계산하며, 다중회귀 β 또는 편상관이 아닙니다.",
+                "r의 절댓값이 1에 가까우면 선형 연관성이 크지만 인과관계를 입증하지 않습니다.",
+                "상수열이나 표본 부족으로 계산되지 않는 r은 결측으로 기록하며 0으로 대체하지 않습니다.",
+                "지역별 회귀계수는 통계적 연관성이며 인과효과가 아닙니다.",
+                "단순회귀는 다른 변수를 통제하지 않으며, 다중회귀 계수는 다른 다섯 변수를 일정하게 둔 조건부 연관성입니다.",
+                "연도 통합 OLS는 지자체 반복관측과 연도효과를 따로 통제하지 않습니다.",
+                "인구구조, 보험료, 진료비, 재정자립도 사이에 상관 및 다중공선성이 존재할 수 있습니다.",
+                "진료비·보험료는 고령화와 질병부담의 결과일 수도 있습니다.",
+                "원본 자료의 결측, 행정구역 개편, 집계 기준 차이로 표본 수가 변합니다.",
+                "건강보험 관련 회귀는 2014년을 배제하여 2015~2022년만 사용합니다.",
+                "2014년 원본 CSV는 변경하거나 삭제하지 않습니다.",
+            ],
+            "index_summary": results,
+        })
+        return results
+    return locals()
+
+_unified_analysis = _namespace_unified_analysis()
+
+globals().update({key: value for key, value in _unified_analysis.items() if not key.startswith('__')})
 
 YEARS = tuple(range(2014, 2023))
 MODES = ("before", "after")
@@ -731,11 +1740,16 @@ def build(base: Path, out: Path):
         print(f"  pooled {mode}: {len(all_models)}; local history {len(hist_models)}", flush=True)
     write_json(out / "data" / "models_pooled.json", all_models)
     write_json(out / "data" / "models_local_history.json", hist_models)
+    import time
+    analysis_started = time.perf_counter()
     birth_audit = build_multivariate(stats, out, detail, province_rows)
     birth_ols_audit = build_birth_ols(out, detail, province_rows)
     fiscal_birth_audit = build_fiscal_birth_ols(out, detail, province_rows)
     expanded_audit = build_expanded_analysis(stats, out, detail, province_rows, TYPES)
+    print(f"기존 분석 생성 소요: {time.perf_counter()-analysis_started:.1f}s", flush=True)
+    unified_started = time.perf_counter()
     unified_audit = build_unified_analysis(out, detail, province_rows, TYPES)
+    print(f"통합 회귀 생성 소요: {time.perf_counter()-unified_started:.1f}s", flush=True)
     # Do not publish superseded five-variable or duplicate six-variable JSON.
     for obsolete_prefix in ("demographic_multi_models_", "household_premium_multi_models_"):
         for obsolete in (out / "data").glob(obsolete_prefix + "*.json"):

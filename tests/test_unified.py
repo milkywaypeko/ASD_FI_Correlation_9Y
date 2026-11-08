@@ -3,7 +3,7 @@ from pathlib import Path
 import math
 import unittest
 
-from unified_analysis import SPECS, HEALTH_YEARS, LABELS, _fit
+from build import SPECS, HEALTH_YEARS, LABELS, _fit
 
 ROOT = Path(__file__).resolve().parents[1]
 
@@ -13,7 +13,7 @@ class TestUnifiedRegression(unittest.TestCase):
         import gzip
         import json
         import tempfile
-        from unified_analysis import _save
+        from build import _save
         raw = {"raw": "OLS Regression Results\\nβ₀ = 0.123",
                "observations": [[2015, "서울특별시", 0.4, None]]}
         with tempfile.TemporaryDirectory() as tmp:

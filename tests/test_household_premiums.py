@@ -4,11 +4,11 @@ import tempfile
 import unittest
 from pathlib import Path
 
-from insurance_premiums import (
+from build import (
     PREMIUM_FIELD, household_premium_10k, parse_household_counts,
     parse_insurance_premiums,
 )
-from expanded_analysis import fit_extended_ols
+from build import fit_extended_ols
 
 BASE = Path(__file__).resolve().parents[1]
 
@@ -110,7 +110,7 @@ class TestHouseholdPremiums(unittest.TestCase):
         script=(BASE/'site'/'assets'/'js'/'unified.js').read_text(encoding='utf-8')
         self.assertNotIn('an-premium-model',main)
         self.assertIn('premium_10k_per_household',(
-            BASE/'unified_analysis.py').read_text(encoding='utf-8'))
+            BASE/'build.py').read_text(encoding='utf-8'))
         self.assertIn('state.model',script)
 
 
