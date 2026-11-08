@@ -1190,8 +1190,12 @@ def parse_disability(folder: Path):
                     continue
                 key = (year, prov, district)
                 if dtype in records[key] and records[key][dtype] != int(val):
-                    duplicated.append(f"장애유형 중복: {key} {dtype}")
+                    raise ValueError(f"장애유형 중복 충돌: {key} {dtype}")
                 records[key][dtype] = int(val)
+    for key, counts in records.items():
+        published_total = counts.pop("전체", None)
+        if published_total is not None and published_total != sum(counts.values()):
+            raise ValueError(f"장애유형 전체 합계 불일치: {key}")
     return records, dict(unknown), duplicated
 
 
@@ -1629,6 +1633,7 @@ def build(base: Path, out: Path):
 
     detail = []
     unmatched = []
+    data_warnings = []
     missing_types_report = []
     missing_count = Counter()
     for (year, province, district), counts in sorted(disabilities.items()):
@@ -1641,8 +1646,8 @@ def build(base: Path, out: Path):
             missing_count["population"] += 1
             continue
         if before is None and after is None:
-            unmatched.append({"year": year, "province": province, "district": district,
-                              "cause": "재정자립도 개편 전/후 모두 없음", "disability": sum(counts.values())})
+            data_warnings.append({"year": year, "province": province, "district": district,
+                                  "cause": "재정자립도 개편 전/후 모두 없음", "disability": sum(counts.values())})
             missing_count["fiscal_both"] += 1
         if before is None: missing_count["fiscal_before"] += 1
         if after is None: missing_count["fiscal_after"] += 1
@@ -1661,6 +1666,7 @@ def build(base: Path, out: Path):
             unmatched.append({"year": year, "province": province, "district": district,
                               "cause": "유형 합계가 주민등록인구보다 큼", "disability": total_disabled, "population": denom})
             missing_count["over_population"] += 1
+            continue
         ratios = {t: round(cnt / denom * 100, 10) for t, cnt in counts.items()}
         ratios["전체"] = round(total_disabled / denom * 100, 10)
         detail.append({"year": year, "province": province, "district": district,
@@ -1673,9 +1679,17 @@ def build(base: Path, out: Path):
     by_province = defaultdict(list)
     for r in detail: by_province[(r["year"], r["province"])].append(r)
     province_rows = []
+    incomplete_provinces = []
     for (year, province), rows in sorted(by_province.items()):
         population = pop_totals.get((year, province))
         if not population:
+            continue
+        municipal_population = sum(r["population"] for r in rows)
+        if municipal_population != population:
+            incomplete_provinces.append({"year": year, "province": province,
+                                         "published_population": population,
+                                         "included_municipality_population": municipal_population,
+                                         "municipality_count": len(rows)})
             continue
         counts = defaultdict(int)
         for r in rows:
@@ -1768,7 +1782,9 @@ def build(base: Path, out: Path):
     write_json(out / "data" / "meta.json", meta)
     quality = {"observations": len(detail), "province_observations": len(province_rows),
                "partially_reported_types": missing_types_report,
-               "unmatched": unmatched, "missing": dict(missing_count),
+               "unmatched": unmatched, "data_warnings": data_warnings,
+               "incomplete_provinces": incomplete_provinces,
+               "missing": dict(missing_count),
                "unknown_types": {str(k): v for k, v in unknown.items()},
                "duplicate_records": pe + fe + de,
                "type_note": "경기도 2014-2017 청각·언어는 통합 유형이며 청각/언어로 강제 분리하지 않음. 일부 지역-연도의 특정 유형은 원본 공란이므로 전체 등록인원 합계는 제공된 유형의 합산값이며 소폭 과소계상 가능.",
