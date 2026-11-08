@@ -440,12 +440,14 @@
     ];
     const maxVariables = spec().fiscal ? spec().fields.length+1 : spec().fields.length;
     for(let i=0;i<maxVariables;i++) {
-      columns.push(col('beta'+i,'β'+(i+1),false));
+      // Put the OLS coefficient's own p-value immediately next to β,
+      // ahead of the distinct Pearson correlation and its SciPy p-value.
+      columns.push(col('beta'+i,isSimple() ? 'OLS β₁ 기울기' : 'β'+(i+1),false));
+      columns.push(col('p'+i,isSimple() ? 'OLS β₁ p값 (양측)' : 'β'+(i+1)+' p값',false));
       if (isSimple()) {
         columns.push(col('corr'+i,'r'+(i+1)+' (Y–X)',false));
         columns.push(col('rp'+i,'r'+(i+1)+' SciPy p값',false));
       }
-      columns.push(col('p'+i,'β'+(i+1)+' p값',false));
     }
     columns.push(col('action','상세',false));
     const head=$('u-index-head'),body=$('u-index-body');
