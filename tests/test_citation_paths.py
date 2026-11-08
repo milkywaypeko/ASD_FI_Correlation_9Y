@@ -27,3 +27,16 @@ def test_all_sources_are_visible_on_methodology_page_with_file_paths():
     assert page.count('https://kosis.kr/statHtml/statHtml.do?orgId=') >= 30
     readme = (ROOT / "README.md").read_text(encoding="utf-8")
     assert "KOSIS 출처 30건" in readme
+
+
+def test_methodology_keeps_reproduction_steps_without_duplicate_kosis_summary():
+    page = (ROOT / "site/quality.html").read_text(encoding="utf-8")
+    section = page.split('id="source-reproducibility"', 1)[1].split('id="kosis-citations"', 1)[0]
+    assert "분석 재현 방법" in section
+    assert "python build.py" in section
+    assert "python -m pytest tests -q" in section
+    assert "REPRODUCIBILITY.md" in section
+    assert "KOSIS 출처 인용 및 분석 재현성" not in section
+    assert "<table" not in section
+    assert page.count('id="kosis-citations"') == 1
+    assert page.count('https://kosis.kr/statHtml/statHtml.do?orgId=') >= 30
