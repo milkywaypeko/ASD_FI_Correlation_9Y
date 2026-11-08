@@ -16,7 +16,7 @@ def test_one_shared_sidebar_on_all_pages():
         nav = re.search(r'<nav class="navigation"[^>]*>(.*?)</nav>', page, re.S)
         assert nav is not None, name
         assert page.count('assets/js/sidebar.js') == 1, name
-        assert nav.group(1).count('<a ') == 2, name
+        assert nav.group(1).count('<a ') == 1, name
         assert 'age-medical-multi.html' not in nav.group(1), name
         assert 'household-premium-ols.html' not in nav.group(1), name
         assert 'birth-ols.html' not in nav.group(1), name
@@ -38,6 +38,8 @@ def test_unique_models_and_legacy_analysis_entries():
         assert script.count(f"['{key}',") == 1, key
     for page in LEGACY:
         assert script.count(f"['{page}',") == 1, page
+    assert "nav.replaceChildren(six)" in script
+    assert "link('index.html', '데이터 탐색'" not in script
     assert "a.dataset.navKey = key" in script
     assert "aria-current" in script
     assert "window.location.pathname.endsWith('/')" in script

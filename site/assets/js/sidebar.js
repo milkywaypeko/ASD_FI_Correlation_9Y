@@ -38,10 +38,9 @@
   function isActive(key) {
     const page = currentPage();
     // The project root now renders the six-variable explorer directly.
-    // site/index.html remains the original fiscal data exploration page.
+    // site/index.html remains available by its direct legacy URL.
     const rootLanding = !window.location.pathname.includes('/site/') &&
       (window.location.pathname.endsWith('/') || page === 'index.html');
-    if (key === 'index.html') return page === 'index.html' && !rootLanding;
     if (key === 'quality.html') return page === 'quality.html';
     if (key.endsWith('.html')) return page === key;
     return (page === 'unified.html' || rootLanding) && unifiedModel() === key;
@@ -63,9 +62,10 @@
   }
 
   // Replace old hardcoded/redirected menus, not their underlying URLs.
-  const home = link('index.html', '데이터 탐색', '▦');
+  // The original fiscal explorer duplicates the unified fiscal model.
+  // Preserve site/index.html for old links, but remove its redundant nav entry.
   const six = link('six', '최종 6변수 다중회귀', '∑');
-  nav.replaceChildren(home, six);
+  nav.replaceChildren(six);
 
   const groupElements = [];
   for (const group of groups) {

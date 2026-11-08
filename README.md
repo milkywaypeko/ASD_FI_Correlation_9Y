@@ -16,7 +16,7 @@
 | --- | --- |
 | [프로젝트 최상위 `index.html`](index.html) | **최종 6변수 다중회귀**를 기본값으로 여는 통합 대시보드 |
 | [`site/unified.html?model=six`](site/unified.html?model=six) | 동일한 통합 회귀 화면, 최종 6변수 모형 직접 열기 |
-| [`site/index.html`](site/index.html) | 기존 재정자립도 × 장애유형별 등록률 **데이터 탐색** 화면 (보존) |
+| [`site/index.html`](site/index.html) | 기존 재정자립도 × 장애유형별 등록률 탐색 화면 (옛 주소 호환용으로 보존, 중복 메뉴에서는 제외) |
 | `site/unified.html?model=age65` | 65세 이상 인구비율 단순회귀 |
 | `site/unified.html?model=under15` | 0–14세 인구비율 단순회귀 |
 | `site/unified.html?model=medical` | 1인당 진료비 단순회귀 |
@@ -28,7 +28,7 @@
 | [`site/results.html`](site/results.html) | 기존 분석 결과표 |
 | [`site/quality.html`](site/quality.html) | 데이터 품질 및 연구 방법 |
 
-사이드바는 공통 `site/assets/js/sidebar.js`를 사용합니다. `개별 단순회귀`와 `기타 기존 분석`을 펼쳐 선택할 수 있습니다. 과거 주소(`age-medical-multi.html`, `age65-ols.html`, `under15-ols.html`, `medical-ols.html`, `household-premium-ols.html`, `birth-ols.html`)는 관련 통합 탭으로 이동합니다. **옛 5변수 선택기를 최종 화면에 남겨 두지 않습니다.**
+사이드바는 공통 `site/assets/js/sidebar.js`를 사용합니다. 중복된 기존 재정자립도 탐색 메뉴는 제거하고 재정자립도 단순회귀는 `site/unified.html?model=fiscal`에서 제공합니다. `개별 단순회귀`와 `기타 기존 분석`을 펼쳐 선택할 수 있습니다. 과거 주소(`age-medical-multi.html`, `age65-ols.html`, `under15-ols.html`, `medical-ols.html`, `household-premium-ols.html`, `birth-ols.html`)는 관련 통합 탭으로 이동합니다. **옛 5변수 선택기를 최종 화면에 남겨 두지 않습니다.**
 
 ## 분석 기간을 정한 이유
 
