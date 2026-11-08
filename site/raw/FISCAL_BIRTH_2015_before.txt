@@ -6,8 +6,8 @@ scope=municipal, region=전국, year=2015, mode=before, n=228
 Dep. Variable:                      y   R-squared:                       0.024
 Model:                            OLS   Adj. R-squared:                  0.020
 Method:                 Least Squares   F-statistic:                     5.583
-Date:                Sat, 07 Nov 2026   Prob (F-statistic):             0.0190
-Time:                        12:27:39   Log-Likelihood:                -23.171
+Date:                Sun, 08 Nov 2026   Prob (F-statistic):             0.0190
+Time:                        14:22:48   Log-Likelihood:                -23.171
 No. Observations:                 228   AIC:                             50.34
 Df Residuals:                     226   BIC:                             57.20
 Df Model:                           1                                         
@@ -34,8 +34,8 @@ scope=municipal, region=서울특별시, year=2015, mode=before, n=25
 Dep. Variable:                      y   R-squared:                       0.100
 Model:                            OLS   Adj. R-squared:                  0.061
 Method:                 Least Squares   F-statistic:                     2.560
-Date:                Sat, 07 Nov 2026   Prob (F-statistic):              0.123
-Time:                        12:27:39   Log-Likelihood:                 26.536
+Date:                Sun, 08 Nov 2026   Prob (F-statistic):              0.123
+Time:                        14:22:48   Log-Likelihood:                 26.536
 No. Observations:                  25   AIC:                            -49.07
 Df Residuals:                      23   BIC:                            -46.63
 Df Model:                           1                                         
@@ -62,8 +62,8 @@ scope=municipal, region=부산광역시, year=2015, mode=before, n=16
 Dep. Variable:                      y   R-squared:                       0.654
 Model:                            OLS   Adj. R-squared:                  0.629
 Method:                 Least Squares   F-statistic:                     26.43
-Date:                Sat, 07 Nov 2026   Prob (F-statistic):           0.000150
-Time:                        12:27:39   Log-Likelihood:                 5.3312
+Date:                Sun, 08 Nov 2026   Prob (F-statistic):           0.000150
+Time:                        14:22:49   Log-Likelihood:                 5.3312
 No. Observations:                  16   AIC:                            -6.662
 Df Residuals:                      14   BIC:                            -5.117
 Df Model:                           1                                         
@@ -90,8 +90,8 @@ scope=municipal, region=대구광역시, year=2015, mode=before, n=8
 Dep. Variable:                      y   R-squared:                       0.299
 Model:                            OLS   Adj. R-squared:                  0.182
 Method:                 Least Squares   F-statistic:                     2.555
-Date:                Sat, 07 Nov 2026   Prob (F-statistic):              0.161
-Time:                        12:27:39   Log-Likelihood:                 3.1159
+Date:                Sun, 08 Nov 2026   Prob (F-statistic):              0.161
+Time:                        14:22:49   Log-Likelihood:                 3.1159
 No. Observations:                   8   AIC:                            -2.232
 Df Residuals:                       6   BIC:                            -2.073
 Df Model:                           1                                         
@@ -118,8 +118,8 @@ scope=municipal, region=인천광역시, year=2015, mode=before, n=10
 Dep. Variable:                      y   R-squared:                       0.317
 Model:                            OLS   Adj. R-squared:                  0.232
 Method:                 Least Squares   F-statistic:                     3.719
-Date:                Sat, 07 Nov 2026   Prob (F-statistic):             0.0899
-Time:                        12:27:39   Log-Likelihood:                 11.454
+Date:                Sun, 08 Nov 2026   Prob (F-statistic):             0.0899
+Time:                        14:22:49   Log-Likelihood:                 11.454
 No. Observations:                  10   AIC:                            -18.91
 Df Residuals:                       8   BIC:                            -18.30
 Df Model:                           1                                         
@@ -146,8 +146,8 @@ scope=municipal, region=광주광역시, year=2015, mode=before, n=5
 Dep. Variable:                      y   R-squared:                       0.030
 Model:                            OLS   Adj. R-squared:                 -0.294
 Method:                 Least Squares   F-statistic:                   0.09181
-Date:                Sat, 07 Nov 2026   Prob (F-statistic):              0.782
-Time:                        12:27:39   Log-Likelihood:                 2.6142
+Date:                Sun, 08 Nov 2026   Prob (F-statistic):              0.782
+Time:                        14:22:49   Log-Likelihood:                 2.6142
 No. Observations:                   5   AIC:                            -1.228
 Df Residuals:                       3   BIC:                            -2.009
 Df Model:                           1                                         
@@ -174,8 +174,8 @@ scope=municipal, region=대전광역시, year=2015, mode=before, n=5
 Dep. Variable:                      y   R-squared:                       0.738
 Model:                            OLS   Adj. R-squared:                  0.651
 Method:                 Least Squares   F-statistic:                     8.464
-Date:                Sat, 07 Nov 2026   Prob (F-statistic):             0.0620
-Time:                        12:27:39   Log-Likelihood:                 7.6044
+Date:                Sun, 08 Nov 2026   Prob (F-statistic):             0.0620
+Time:                        14:22:49   Log-Likelihood:                 7.6044
 No. Observations:                   5   AIC:                            -11.21
 Df Residuals:                       3   BIC:                            -11.99
 Df Model:                           1                                         
@@ -202,8 +202,8 @@ scope=municipal, region=울산광역시, year=2015, mode=before, n=5
 Dep. Variable:                      y   R-squared:                       0.190
 Model:                            OLS   Adj. R-squared:                 -0.079
 Method:                 Least Squares   F-statistic:                    0.7056
-Date:                Sat, 07 Nov 2026   Prob (F-statistic):              0.463
-Time:                        12:27:39   Log-Likelihood:                 3.0079
+Date:                Sun, 08 Nov 2026   Prob (F-statistic):              0.463
+Time:                        14:22:49   Log-Likelihood:                 3.0079
 No. Observations:                   5   AIC:                            -2.016
 Df Residuals:                       3   BIC:                            -2.797
 Df Model:                           1                                         
@@ -230,8 +230,8 @@ scope=municipal, region=경기도, year=2015, mode=before, n=31
 Dep. Variable:                      y   R-squared:                       0.001
 Model:                            OLS   Adj. R-squared:                 -0.033
 Method:                 Least Squares   F-statistic:                   0.03368
-Date:                Sat, 07 Nov 2026   Prob (F-statistic):              0.856
-Time:                        12:27:39   Log-Likelihood:                 14.505
+Date:                Sun, 08 Nov 2026   Prob (F-statistic):              0.856
+Time:                        14:22:49   Log-Likelihood:                 14.505
 No. Observations:                  31   AIC:                            -25.01
 Df Residuals:                      29   BIC:                            -22.14
 Df Model:                           1                                         
@@ -258,8 +258,8 @@ scope=municipal, region=강원특별자치도, year=2015, mode=before, n=18
 Dep. Variable:                      y   R-squared:                       0.261
 Model:                            OLS   Adj. R-squared:                  0.214
 Method:                 Least Squares   F-statistic:                     5.637
-Date:                Sat, 07 Nov 2026   Prob (F-statistic):             0.0304
-Time:                        12:27:39   Log-Likelihood:               -0.81271
+Date:                Sun, 08 Nov 2026   Prob (F-statistic):             0.0304
+Time:                        14:22:49   Log-Likelihood:               -0.81271
 No. Observations:                  18   AIC:                             5.625
 Df Residuals:                      16   BIC:                             7.406
 Df Model:                           1                                         
@@ -286,8 +286,8 @@ scope=municipal, region=충청북도, year=2015, mode=before, n=11
 Dep. Variable:                      y   R-squared:                       0.105
 Model:                            OLS   Adj. R-squared:                  0.006
 Method:                 Least Squares   F-statistic:                     1.057
-Date:                Sat, 07 Nov 2026   Prob (F-statistic):              0.331
-Time:                        12:27:39   Log-Likelihood:                 1.3972
+Date:                Sun, 08 Nov 2026   Prob (F-statistic):              0.331
+Time:                        14:22:49   Log-Likelihood:                 1.3972
 No. Observations:                  11   AIC:                             1.206
 Df Residuals:                       9   BIC:                             2.001
 Df Model:                           1                                         
@@ -314,8 +314,8 @@ scope=municipal, region=충청남도, year=2015, mode=before, n=15
 Dep. Variable:                      y   R-squared:                       0.344
 Model:                            OLS   Adj. R-squared:                  0.294
 Method:                 Least Squares   F-statistic:                     6.830
-Date:                Sat, 07 Nov 2026   Prob (F-statistic):             0.0215
-Time:                        12:27:39   Log-Likelihood:                 4.6174
+Date:                Sun, 08 Nov 2026   Prob (F-statistic):             0.0215
+Time:                        14:22:49   Log-Likelihood:                 4.6174
 No. Observations:                  15   AIC:                            -5.235
 Df Residuals:                      13   BIC:                            -3.819
 Df Model:                           1                                         
@@ -342,8 +342,8 @@ scope=municipal, region=전북특별자치도, year=2015, mode=before, n=14
 Dep. Variable:                      y   R-squared:                       0.029
 Model:                            OLS   Adj. R-squared:                 -0.051
 Method:                 Least Squares   F-statistic:                    0.3644
-Date:                Sat, 07 Nov 2026   Prob (F-statistic):              0.557
-Time:                        12:27:39   Log-Likelihood:                 4.6162
+Date:                Sun, 08 Nov 2026   Prob (F-statistic):              0.557
+Time:                        14:22:49   Log-Likelihood:                 4.6162
 No. Observations:                  14   AIC:                            -5.232
 Df Residuals:                      12   BIC:                            -3.954
 Df Model:                           1                                         
@@ -370,8 +370,8 @@ scope=municipal, region=전라남도, year=2015, mode=before, n=22
 Dep. Variable:                      y   R-squared:                       0.009
 Model:                            OLS   Adj. R-squared:                 -0.040
 Method:                 Least Squares   F-statistic:                    0.1896
-Date:                Sat, 07 Nov 2026   Prob (F-statistic):              0.668
-Time:                        12:27:39   Log-Likelihood:                -5.5395
+Date:                Sun, 08 Nov 2026   Prob (F-statistic):              0.668
+Time:                        14:22:49   Log-Likelihood:                -5.5395
 No. Observations:                  22   AIC:                             15.08
 Df Residuals:                      20   BIC:                             17.26
 Df Model:                           1                                         
@@ -398,8 +398,8 @@ scope=municipal, region=경상북도, year=2015, mode=before, n=23
 Dep. Variable:                      y   R-squared:                       0.013
 Model:                            OLS   Adj. R-squared:                 -0.034
 Method:                 Least Squares   F-statistic:                    0.2749
-Date:                Sat, 07 Nov 2026   Prob (F-statistic):              0.606
-Time:                        12:27:39   Log-Likelihood:                 9.8871
+Date:                Sun, 08 Nov 2026   Prob (F-statistic):              0.606
+Time:                        14:22:49   Log-Likelihood:                 9.8871
 No. Observations:                  23   AIC:                            -15.77
 Df Residuals:                      21   BIC:                            -13.50
 Df Model:                           1                                         
@@ -426,8 +426,8 @@ scope=municipal, region=경상남도, year=2015, mode=before, n=18
 Dep. Variable:                      y   R-squared:                       0.130
 Model:                            OLS   Adj. R-squared:                  0.076
 Method:                 Least Squares   F-statistic:                     2.393
-Date:                Sat, 07 Nov 2026   Prob (F-statistic):              0.141
-Time:                        12:27:39   Log-Likelihood:                 3.4834
+Date:                Sun, 08 Nov 2026   Prob (F-statistic):              0.141
+Time:                        14:22:49   Log-Likelihood:                 3.4834
 No. Observations:                  18   AIC:                            -2.967
 Df Residuals:                      16   BIC:                            -1.186
 Df Model:                           1                                         
@@ -454,8 +454,8 @@ scope=provincial, region=전국, year=2015, mode=before, n=17
 Dep. Variable:                      y   R-squared:                       0.165
 Model:                            OLS   Adj. R-squared:                  0.110
 Method:                 Least Squares   F-statistic:                     2.969
-Date:                Sat, 07 Nov 2026   Prob (F-statistic):              0.105
-Time:                        12:27:39   Log-Likelihood:                 5.2512
+Date:                Sun, 08 Nov 2026   Prob (F-statistic):              0.105
+Time:                        14:22:49   Log-Likelihood:                 5.2512
 No. Observations:                  17   AIC:                            -6.502
 Df Residuals:                      15   BIC:                            -4.836
 Df Model:                           1                                         
