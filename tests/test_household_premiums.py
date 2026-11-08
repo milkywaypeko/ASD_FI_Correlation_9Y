@@ -110,7 +110,7 @@ class TestHouseholdPremiums(unittest.TestCase):
         script=(BASE/'site'/'assets'/'js'/'unified.js').read_text(encoding='utf-8')
         self.assertNotIn('an-premium-model',main)
         self.assertIn('premium_10k_per_household',(
-            BASE/'unified_analysis.py').read_text(encoding='utf-8'))
+            BASE/'build.py').read_text(encoding='utf-8'))
         self.assertIn('state.model',script)
 
 
