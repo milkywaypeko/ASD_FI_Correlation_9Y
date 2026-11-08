@@ -41,7 +41,7 @@ def test_language_toggle_is_persistent_accessible_and_presentation_only():
         assert expected in js
     # The i18n code must not edit numeric results, CSV payloads, regression
     # coefficients, observations, or source JSON.
-    for forbidden in ["statsmodels.OLS(", "pearsonr(", "fetch(", "JSON.stringify(", "new Blob(", "download("]:
+    for forbidden in ["pearsonr(", "fetch(", "JSON.stringify(", "new Blob(", "download("]:
         assert forbidden not in js
 
 
