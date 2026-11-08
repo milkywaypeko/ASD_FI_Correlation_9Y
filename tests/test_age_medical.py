@@ -5,7 +5,7 @@ import tempfile
 import unittest
 from pathlib import Path
 
-from expanded_analysis import (
+from build import (
     parse_age_population, parse_medical_expenses, fit_extended_ols,
     build_expanded_analysis, MEDICAL,
 )
@@ -106,7 +106,7 @@ class TestAgeMedicalRegressions(unittest.TestCase):
         self.assertIsNotNone(none["warning"])
 
     def test_type_specific_model_files_use_expected_code_and_coverage(self):
-        from expanded_analysis import _emit_disability_type_models
+        from build import _emit_disability_type_models
         detail = []
         for i in range(12):
             detail.append({"year":2022,"province":"서울특별시", "district":f"구{i}",
