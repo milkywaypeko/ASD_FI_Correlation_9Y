@@ -4,11 +4,11 @@ import tempfile
 import unittest
 from pathlib import Path
 
-from insurance_premiums import (
+from build import (
     PREMIUM_FIELD, household_premium_10k, parse_household_counts,
     parse_insurance_premiums,
 )
-from expanded_analysis import fit_extended_ols
+from build import fit_extended_ols
 
 BASE = Path(__file__).resolve().parents[1]
 
