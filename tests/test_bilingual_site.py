@@ -85,3 +85,16 @@ def test_retired_duplicate_disability_ols_generator_is_removed():
     assert "def _emit_disability_type_models(" not in build
     assert "def build_unified_analysis(" in build
     assert "def _emit_models(" in build  # still needed by legacy analysis pages
+
+
+def test_ols_warning_capture_and_statistical_caveats():
+    build = (ROOT / "build.py").read_text(encoding="utf-8")
+    assert 'warnings.simplefilter("ignore")' not in build
+    assert "def _report_ols_warnings(" in build
+    assert build.count("_report_ols_warnings(caught_ols_warnings)") == 5
+    assert "province_population = num(row[i])" in build
+    assert "district_population = num(row[i])" in build
+    for page in ("index.html", "site/unified.html"):
+        html = (ROOT / page).read_text(encoding="utf-8")
+        assert "생태학적 오류" in html
+        assert "다중공선성" in html
