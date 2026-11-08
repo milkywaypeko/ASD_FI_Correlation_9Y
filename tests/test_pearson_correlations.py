@@ -5,7 +5,7 @@ from pathlib import Path
 import pytest
 from scipy.stats import pearsonr
 
-from unified_analysis import _pearson_correlation, _scipy_pearson_result, _fit, SPECS
+from build import _pearson_correlation, _scipy_pearson_result, _fit, SPECS
 
 ROOT = Path(__file__).resolve().parents[1]
 
