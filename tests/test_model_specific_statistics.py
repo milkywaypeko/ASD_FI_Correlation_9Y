@@ -59,7 +59,7 @@ def test_simple_ols_slope_pvalue_and_scientific_notation():
     assert "text('u-pmodel',fmtP(item.p_model,9))" in js
     assert "const fmtP = (x, digits = 9) =>" in js
     assert "if (Math.abs(p) < 10 ** (-digits)) return p.toExponential(3)" in js
-    assert "if (p === 0) return '0 (정밀도 한계 가능)'" in js
+    assert "if (p === 0) return '< 1e-323 (정밀도 한계)'" in js
     assert "values.push(fmtP(c.p, 9))" in js
     assert "values.push(fmtP(item?.correlation_pvalues?.[i], 9))" in js
     assert "fmtP(scipy?.pvalue, 10)" in js
@@ -77,3 +77,16 @@ def test_simple_regression_index_shows_coefficient_pvalue_next_to_slope():
     assert "if(/^p\\d+$/.test(column.key))value=item.pvalues[Number(column.key.slice(1))]" in js
     assert "? fmtP(value, 8) : fmt(value, 8)" in js
     assert "columns.push(col('rp'+i,'r'+(i+1)+' SciPy p값',false))" in js
+
+
+def test_ols_pvalue_index_columns_use_scientific_formatter():
+    """OLS p0, p1, ... must be detected by the p-value formatting branch."""
+    js = (SITE / "assets/js/unified.js").read_text(encoding="utf-8")
+    # A doubled backslash in the JS regex matches a literal backslash followed
+    # by d, and silently routes all coefficient p-values to the generic fmt.
+    assert r"/^p\d+$/.test(column.key)" in js
+    assert r"/^p\\d+$/.test(column.key)" not in js
+    assert "column.key==='p_model' || column.key.startsWith('rp')" in js
+    assert "? fmtP(value, 8) : fmt(value, 8)" in js
+    assert "if (p === 0) return '< 1e-323 (정밀도 한계)'" in js
+    assert "return p.toExponential(3)" in js

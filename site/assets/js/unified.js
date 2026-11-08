@@ -5,11 +5,12 @@
   const parse = x => x === null || x === undefined || !Number.isFinite(Number(x)) ? null : Number(x);
   const fmt = (x, digits = 6) => parse(x) === null ? '—' : Number(x).toLocaleString('ko-KR', {maximumFractionDigits: digits});
   // Preserve nonzero p-values that would round to 0 at the chosen decimal precision.
-  // A stored numeric 0 cannot be recovered: it may already have underflowed upstream.
+  // A stored numeric 0 cannot be recovered: report the IEEE-754 underflow
+  // threshold as a bound, not a fabricated exact p-value.
   const fmtP = (x, digits = 9) => {
     const p = parse(x);
     if (p === null) return '—';
-    if (p === 0) return '0 (정밀도 한계 가능)';
+    if (p === 0) return '< 1e-323 (정밀도 한계)';
     if (Math.abs(p) < 10 ** (-digits)) return p.toExponential(3);
     return fmt(p, digits);
   };
@@ -481,7 +482,7 @@
           if(column.key.startsWith('rp'))value=item.correlation_pvalues?.[Number(column.key.slice(2))];
           if(/^p\d+$/.test(column.key))value=item.pvalues[Number(column.key.slice(1))];
           td.textContent=typeof value==='number' ?
-             ((column.key==='p_model' || column.key.startsWith('rp') || /^p\\d+$/.test(column.key))
+             ((column.key==='p_model' || column.key.startsWith('rp') || /^p\d+$/.test(column.key))
                ? fmtP(value, 8) : fmt(value, 8)) : String(value??'—');
         }
         row.append(td);
