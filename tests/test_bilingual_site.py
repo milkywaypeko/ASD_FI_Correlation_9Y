@@ -77,3 +77,11 @@ def test_single_build_file_preserves_regression_helpers_and_timing():
         assert name in build
     for old in ("expanded_analysis.py", "unified_analysis.py", "insurance_premiums.py"):
         assert not (ROOT / old).exists()
+
+
+def test_retired_duplicate_disability_ols_generator_is_removed():
+    """Unified analysis owns the per-type shards; no unused second generator."""
+    build = (ROOT / "build.py").read_text(encoding="utf-8")
+    assert "def _emit_disability_type_models(" not in build
+    assert "def build_unified_analysis(" in build
+    assert "def _emit_models(" in build  # still needed by legacy analysis pages
