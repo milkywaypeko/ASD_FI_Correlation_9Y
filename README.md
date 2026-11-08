@@ -6,6 +6,10 @@
 
 지역별 재정자립도, 인구구조, 합계출산율, 1인당 진료비, 가구당 건강보험료와 **선택한 장애유형의 등록률(%)** 사이의 통계적 연관성을 탐색하는 연구용 사이트입니다. 계산은 Python에서 사전 실행하며 브라우저에서는 생성된 정적 데이터만 읽습니다. **OLS는 인과관계를 입증하지 않습니다.**
 
+## 한국어 / English 전환
+
+모든 정적 대시보드의 사이드바 상단에 **한국어 / English** 언어 선택 버튼이 있습니다. 선택한 언어는 브라우저에 저장되며 다른 분석 페이지로 이동해도 유지됩니다. 영어 직접 링크는 [English dashboard](https://milkywaypeko.github.io/ASD_FI_Correlation_9Y/?lang=en), 한국어 직접 링크는 [한국어 대시보드](https://milkywaypeko.github.io/ASD_FI_Correlation_9Y/?lang=ko)입니다. 표·설명·메뉴의 주요 UI 텍스트를 번역하며 통계 데이터, 원시 statsmodels/SciPy 출력, 지역·장애유형의 내부 식별자, CSV의 원본 값은 그대로 유지합니다.
+
 ## 홈페이지와 분석 화면
 
 | 주소 | 내용 |
