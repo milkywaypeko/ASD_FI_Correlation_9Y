@@ -65,3 +65,15 @@ def test_simple_ols_slope_pvalue_and_scientific_notation():
     assert "fmtP(scipy?.pvalue, 10)" in js
     assert "fmtP(value, 8)" in js
     assert "fmtP(c.raw.y,10)" in js
+
+
+def test_simple_regression_index_shows_coefficient_pvalue_next_to_slope():
+    """The per-year/province/municipality table must expose the OLS slope test,
+    distinct from the Pearson correlation test, without recomputing statistics."""
+    js = (SITE / "assets/js/unified.js").read_text(encoding="utf-8")
+    assert "columns.push(col('beta'+i,isSimple() ? 'OLS β₁ 기울기' : 'β'+(i+1),false))" in js
+    assert "columns.push(col('p'+i,isSimple() ? 'OLS β₁ p값 (양측)' : 'β'+(i+1)+' p값',false))" in js
+    assert js.index("columns.push(col('beta'+i,isSimple()") < js.index("columns.push(col('p'+i,isSimple()") < js.index("columns.push(col('corr'+i")
+    assert "if(/^p\\d+$/.test(column.key))value=item.pvalues[Number(column.key.slice(1))]" in js
+    assert "? fmtP(value, 8) : fmt(value, 8)" in js
+    assert "columns.push(col('rp'+i,'r'+(i+1)+' SciPy p값',false))" in js
