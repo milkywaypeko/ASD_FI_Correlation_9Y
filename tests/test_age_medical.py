@@ -105,42 +105,29 @@ class TestAgeMedicalRegressions(unittest.TestCase):
         self.assertEqual(none["n"], 0)
         self.assertIsNotNone(none["warning"])
 
-    def test_type_specific_model_files_use_expected_code_and_coverage(self):
-        from build import _emit_disability_type_models
+    def test_type_specific_ols_uses_unified_generator_and_complete_provinces(self):
+        """The retired type shard generator is replaced by unified OLS fits."""
+        from build import _fit
         detail = []
         for i in range(12):
-            detail.append({"year":2022,"province":"서울특별시", "district":f"구{i}",
-                           "age65_percent":float(i), "under15_percent":float((i*7)%11),
-                           "fertility":0.7+i*.01, "medical_10k_per_person":12+i*.3,
-                           "after":.2+i*.01,"before":.3+i*.01,
-                           "rates":{"전체":3+i*.12,"지체":.02*i}})
-        provincial = [{"year":2022,"province":"서울특별시","district":"서울특별시",
-                       "age65_percent":19., "under15_percent":14.,"fertility":.8,
-                       "medical_10k_per_person":30.,"after":.4,"before":.3,
-                       "rates":{"전체":3.1,"지체":1.3},"complete_types":["전체"]}]
-        with tempfile.TemporaryDirectory() as tmp:
-            audit = _emit_disability_type_models(Path(tmp),detail,provincial,["전체","지체"])
-            self.assertIn("지체",audit)
-            self.assertNotIn("전체",audit)
-            expected = Path(tmp)/"data"/"age65_ols_models_type_01.json"
-            result = json.loads(expected.read_text(encoding="utf-8"))
-            self.assertEqual(result["type"],"지체")
-            national = next(m for m in result["models"] if
-                            m["year"] == 2022 and m["region"] == "전국"
-                            and m["scope"] == "municipal")
-            self.assertEqual(national["n"],12)
-            self.assertAlmostEqual(national["coefficients"]["age65_percent"]["coef"],.02)
-            self.assertIn("OLS Regression Results", national["raw"])
-            self.assertIn("Prob (F-statistic)", national["raw"])
-            self.assertIn("Log-Likelihood", national["raw"])
-            self.assertIn("Durbin-Watson", national["raw"])
-            self.assertIn("Jarque-Bera", national["raw"])
-            self.assertIn("Notes:", national["raw"])
-            self.assertNotIn("OLS / 지체", national["raw"])
-            province_ols = next(m for m in result["models"] if
-                            m["year"] == 2022 and m["scope"] == "provincial")
-            self.assertEqual(province_ols["n"],0)
-            self.assertIsNotNone(province_ols["warning"])
+            detail.append({"year": 2022, "province": "서울특별시", "district": f"구{i}",
+                           "age65_percent": float(i), "rates": {"전체": 3+i*.12, "지체": .02*i}})
+        provincial = [{"year": 2022, "province": "서울특별시", "district": "서울특별시",
+                       "age65_percent": 19., "rates": {"전체": 3.1, "지체": 1.3},
+                       "complete_types": ["전체"]}]
+        national, detail_record = _fit(detail, "지체", ("age65_percent",),
+                                       "municipal", "전국", 2022, None)
+        self.assertEqual(national["n"], 12)
+        self.assertAlmostEqual(national["coefficients"][0], .02)
+        self.assertIn("OLS Regression Results", detail_record["model"]["raw"])
+        self.assertIn("Prob (F-statistic)", detail_record["model"]["raw"])
+        self.assertIn("Durbin-Watson", detail_record["model"]["raw"])
+        self.assertEqual(len(detail_record["observations"]), 12)
+        province, province_detail = _fit(provincial, "지체", ("age65_percent",),
+                                        "provincial", "전국", 2022, None)
+        self.assertEqual(province["n"], 0)
+        self.assertIsNotNone(province["warning"])
+        self.assertEqual(province_detail["observations"], [])
 
     def test_unified_type_filters_and_lazy_model_detail(self):
         script=(ROOT/"site"/"assets"/"js"/"unified.js").read_text(encoding="utf-8")
