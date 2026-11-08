@@ -59,10 +59,11 @@
     [state.fiscal, ...spec().fields] : [...spec().fields];
   const modelFields = item => item && item.mode && spec().fiscal ?
     [item.mode, ...spec().fields] : [...spec().fields];
+  const allDistricts = () => state.scope === 'local_history' && state.district === '전체';
   const region = () => state.scope === 'provincial' ? '전국' :
     state.scope === 'local_history' ? state.province + '|' + state.district : state.province;
   const period = () => state.pooled || state.scope === 'local_history' ? '전기간' : state.year;
-  const findSelected = () => index.find(item => item.type === state.dtype &&
+  const findSelected = () => allDistricts() ? null : index.find(item => item.type === state.dtype &&
     item.scope === state.scope && item.region === region() &&
     String(item.year) === String(period()) &&
     (!spec().fiscal || item.mode === state.fiscal));
@@ -86,9 +87,10 @@
   function updateDistrict() {
     const control = $('u-district'), old = state.district;
     control.replaceChildren();
-    if (state.province === '전국') {state.district='';control.disabled=true;return;}
-    (manifest.districts[state.province] || []).forEach(value => opt(control, value, value));
-    control.value = [...control.options].some(o => o.value === old) ? old : control.options[0]?.value || '';
+    opt(control, '전체', '전체');
+    if (state.province !== '전국')
+      (manifest.districts[state.province] || []).forEach(value => opt(control, value, value));
+    control.value = [...control.options].some(o => o.value === old) ? old : '전체';
     state.district = control.value;
     control.disabled = state.scope !== 'local_history';
   }
@@ -399,8 +401,13 @@
       return false;
     }
     if (!state.allTypes && item.type!==state.dtype) return false;
-    // Province restrictions must not exclude nationwide rows in the preset.
-    if (!nationwide && !state.allRegions && state.province!=='전국' &&
+    // Province and municipality '전체' select multiple existing OLS rows,
+    // never invent a pooled OLS model from separate local-history fits.
+    if (!nationwide && state.scope === 'local_history' && !state.allRegions) {
+      if (item.scope !== 'local_history') return false;
+      if (state.province !== '전국' && !item.region.startsWith(state.province + '|')) return false;
+      if (state.district !== '전체' && item.region !== state.province + '|' + state.district) return false;
+    } else if (!nationwide && !state.allRegions && state.province!=='전국' &&
         !item.region.includes(state.province) && item.region!=='전국') return false;
     if (spec().fiscal && item.mode!==state.fiscal) return false;
     const q=state.search.trim().toLocaleLowerCase();
@@ -563,6 +570,10 @@
       drawTrends();
       const chosen=findSelected();
       await select(chosen);
+      if (allDistricts()) {
+        text('u-caption','전체 기초지자체 · 아래 통계표에서 개별 회귀 결과 선택');
+        text('u-warning','전체 선택은 각 기초지자체의 기존 회귀 결과를 비교합니다. 단일 통합 OLS 모형을 의미하지 않습니다.');
+      }
       if(changeModel) {
         const url=new URL(location.href);url.searchParams.set('model',state.model);
         history.replaceState(null,'',url);
@@ -582,16 +593,13 @@
     if(initial && manifest.models[initial])state.model=initial;
     for(const [id,value] of Object.entries(manifest.models))opt($('u-model'),id,value.label);
     manifest.types.forEach(v=>opt($('u-type'),v,v));
-    opt($('u-province'),'전국','전국');
+    opt($('u-province'),'전국','전체 (전국)');
     manifest.provinces.forEach(v=>opt($('u-province'),v,v));
     updateDistrict();
     $('u-model').onchange=e=>{state.model=e.target.value;state.year=2022;state.trendVar=0;state.page=0;render(true);};
     $('u-type').onchange=e=>{state.dtype=e.target.value;state.page=0;render();};
     $('u-scope').onchange=e=>{
       state.scope=e.target.value;
-      if(state.scope==='local_history'&&state.province==='전국') {
-        state.province=manifest.provinces[0];$('u-province').value=state.province;
-      }
       updateDistrict();render();
     };
     $('u-province').onchange=e=>{state.province=e.target.value;updateDistrict();render();};
