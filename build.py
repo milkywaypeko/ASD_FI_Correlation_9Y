@@ -8,6 +8,9 @@ import math
 import re
 import warnings
 import shutil
+import gzip
+import scipy
+from scipy.stats import pearsonr
 from collections import Counter, defaultdict
 from pathlib import Path
 
@@ -35,16 +38,7 @@ def _namespace_expanded_analysis():
     total is absent, and missing covariates are never imputed.
     """
     
-    import csv
-    import json
-    import math
-    import re
-    import warnings
-    from collections import defaultdict
-    from pathlib import Path
     
-    import numpy as np
-    import statsmodels.api as sm
     
     YEARS = tuple(range(2014, 2023))
     MODES = ("before", "after")
@@ -501,11 +495,6 @@ def _namespace_insurance_premiums():
     would change the estimand. The optional household-count CSV is required for
     premium-per-household regression and is documented in Statistics/README.md.
     """
-    import csv
-    import math
-    import re
-    from collections import defaultdict
-    from pathlib import Path
     
     PREMIUM_FIELD = "premium_10k_per_household"
     PREMIUM_FILE_PATTERN = "시군구*별 보험료 현황.csv"
@@ -725,16 +714,7 @@ def _namespace_unified_analysis():
     Original Statistics CSV files are never modified.
     """
     
-    from collections import defaultdict
-    from pathlib import Path
-    import gzip
-    import json
-    import math
-    import shutil
-    import warnings
     
-    import scipy
-    from scipy.stats import pearsonr
     
     
     HEALTH_YEARS = tuple(range(2015, 2023))
