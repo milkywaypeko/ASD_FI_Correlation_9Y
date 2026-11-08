@@ -15,6 +15,17 @@ import numpy as np
 import statsmodels.api as sm
 
 
+# Report each distinct numerical warning once rather than hiding fit diagnostics.
+_REPORTED_OLS_WARNINGS = set()
+
+def _report_ols_warnings(captured):
+    for item in captured:
+        signature = (item.category.__name__, str(item.message))
+        if signature not in _REPORTED_OLS_WARNINGS:
+            _REPORTED_OLS_WARNINGS.add(signature)
+            print(f"[OLS warning] {signature[0]}: {signature[1]}", flush=True)
+
+
 # ===== Embedded former expanded_analysis.py =====
 def _namespace_expanded_analysis():
     """Additional 2014–2022 demographic and medical-expense OLS models.
@@ -298,10 +309,11 @@ def _namespace_expanded_analysis():
             result["warning"] = "독립변수에 상수 또는 완전한 선형종속이 존재합니다."
             return result
         try:
-            with warnings.catch_warnings():
-                warnings.simplefilter("ignore")
+            with warnings.catch_warnings(record=True) as caught_ols_warnings:
+                warnings.simplefilter("always")
                 model = sm.OLS(y, design).fit()
                 raw = str(model.summary(xname=["const"] + [field.replace("before","fiscal_before").replace("after","fiscal_after") for field in predictors]))
+            _report_ols_warnings(caught_ols_warnings)
             ci = model.conf_int(alpha=.05)
             coefficients = {
                 field: {
@@ -1100,9 +1112,9 @@ def parse_population(path: Path):
         if name in PROVINCES:
             province = name
             for i, y in year_cols:
-                value = num(row[i])
-                if value is not None and value > 0:
-                    total[(y, province)] = int(value)
+                province_population = num(row[i])
+                if province_population is not None and province_population > 0:
+                    total[(y, province)] = int(province_population)
             continue
         if province is None:
             continue
@@ -1115,12 +1127,12 @@ def parse_population(path: Path):
         # Skip child administrative districts / field offices because the source also
         # provides a parent city total. Only merge keys that exist in the disability source.
         for i, y in year_cols:
-            value = num(row[i])
-            if value is not None and value > 0:
+            district_population = num(row[i])
+            if district_population is not None and district_population > 0:
                 key = (y, province, district)
-                if key in local and local[key] != int(value):
-                    errors.append(f"인구 중복: {key} {local[key]} vs {value}")
-                local[key] = int(value)
+                if key in local and local[key] != int(district_population):
+                    errors.append(f"인구 중복: {key} {local[key]} vs {district_population}")
+                local[key] = int(district_population)
     for (y, province), value in total.items():
         if province in SPECIAL:
             local[(y, province, province)] = value
@@ -1239,9 +1251,10 @@ def fit_model(obs: list[dict], scope: str, region: str, year: str | int,
     model = sm.OLS(ys, X).fit()
     result.update(intercept=finite(model.params[0]), slope=finite(model.params[1]),
                   r2=finite(model.rsquared), p=finite_probability(model.pvalues[1]))
-    with warnings.catch_warnings():
-        warnings.simplefilter("ignore")
+    with warnings.catch_warnings(record=True) as caught_ols_warnings:
+        warnings.simplefilter("always")
         result["raw"] = str(model.summary())
+    _report_ols_warnings(caught_ols_warnings)
     raw_group.append(f"\n{'=' * 78}\nscope={scope}, region={region}, year={year}, type={dtype}, mode={mode}, n={n}\n" + result["raw"] + "\n")
     return result
 
@@ -1317,10 +1330,11 @@ def fit_multivariate(obs: list[dict], scope: str, region: str,
         result["warning"] = "독립변수 중 상수 또는 완전 선형종속 항목이 있어 추정할 수 없습니다."
         return result
     try:
-        with warnings.catch_warnings():
-            warnings.simplefilter("ignore")
+        with warnings.catch_warnings(record=True) as caught_ols_warnings:
+            warnings.simplefilter("always")
             model = sm.OLS(z[:, 2], x).fit()
             raw = str(model.summary(xname=["const", "fiscal_independence_0to1", "total_fertility_rate"]))
+        _report_ols_warnings(caught_ols_warnings)
     except (ValueError, np.linalg.LinAlgError) as ex:
         result["warning"] = f"회귀계산 오류: {ex}"
         return result
@@ -1440,10 +1454,11 @@ def fit_birth_ols(obs: list[dict], scope: str, region: str,
     if np.ptp(x) < 1e-12:
         model_result["warning"] = "합계출산율 관측값이 모두 같아 기울기를 추정할 수 없습니다."
         return model_result
-    with warnings.catch_warnings():
-        warnings.simplefilter("ignore")
+    with warnings.catch_warnings(record=True) as caught_ols_warnings:
+        warnings.simplefilter("always")
         result = sm.OLS(y, sm.add_constant(x, has_constant="add")).fit()
         raw = str(result.summary(xname=["const", "total_fertility_rate"]))
+    _report_ols_warnings(caught_ols_warnings)
     ci = result.conf_int(alpha=0.05)
     model_result.update(intercept=finite(result.params[0]), slope=finite(result.params[1]),
                         r2=finite(result.rsquared), adj_r2=finite(result.rsquared_adj),
@@ -1533,10 +1548,11 @@ def fit_fiscal_birth_ols(obs: list[dict], scope: str, region: str,
         result["warning"] = "재정자립도가 모두 같아서 기울기를 추정할 수 없습니다."
         return result
     try:
-        with warnings.catch_warnings():
-            warnings.simplefilter("ignore")
+        with warnings.catch_warnings(record=True) as caught_ols_warnings:
+            warnings.simplefilter("always")
             model = sm.OLS(ys, sm.add_constant(xs, has_constant="add")).fit()
             raw = str(model.summary(xname=["const", "fiscal_independence_0to1"]))
+        _report_ols_warnings(caught_ols_warnings)
         ci = model.conf_int(alpha=.05)
         result.update(intercept=finite(model.params[0]), slope=finite(model.params[1]),
                       r2=finite(model.rsquared), adj_r2=finite(model.rsquared_adj),
