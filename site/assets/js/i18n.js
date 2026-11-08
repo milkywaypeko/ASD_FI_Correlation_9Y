@@ -171,7 +171,7 @@
 
   const originals = new WeakMap();
   const rendered = new WeakMap();
-  const skipped = new Set(['SCRIPT','STYLE','NOSCRIPT','TEXTAREA','PRE','CODE','OPTION']);
+  const skipped = new Set(['SCRIPT','STYLE','NOSCRIPT','TEXTAREA','PRE','CODE']);
   function translate(source) {
     if (language === 'ko' || !/[가-힣]/.test(source)) return source;
     let value = source;
@@ -241,7 +241,7 @@
     document.documentElement.dataset.language=code;
     buttons.ko.setAttribute('aria-pressed',String(code==='ko'));
     buttons.en.setAttribute('aria-pressed',String(code==='en'));
-    document.title=translate(document.titleKo || (document.titleKo=document.title));
+    document.title=language==='ko' ? (document.titleKo || (document.titleKo=document.title)) : translate(document.titleKo || (document.titleKo=document.title));
     translateTree(document.body);
     window.dispatchEvent(new CustomEvent('site-language-change',{detail:{language:code}}));
   }
