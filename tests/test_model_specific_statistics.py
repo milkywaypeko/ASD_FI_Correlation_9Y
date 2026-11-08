@@ -90,3 +90,15 @@ def test_ols_pvalue_index_columns_use_scientific_formatter():
     assert "? fmtP(value, 8) : fmt(value, 8)" in js
     assert "if (p === 0) return '< 1e-323 (정밀도 한계)'" in js
     assert "return p.toExponential(3)" in js
+
+
+def test_analysis_filters_support_all_provinces_and_districts():
+    js = (SITE / "assets/js/unified.js").read_text(encoding="utf-8")
+    assert "opt($('u-province'),'전국','전체 (전국)')" in js
+    assert "opt(control, '전체', '전체')" in js
+    assert "const allDistricts = () => state.scope === 'local_history' && state.district === '전체'" in js
+    assert "const findSelected = () => allDistricts() ? null :" in js
+    assert "state.province !== '전국' && !item.region.startsWith(state.province + '|')" in js
+    assert "state.district !== '전체' && item.region !== state.province + '|' + state.district" in js
+    assert "전체 선택은 각 기초지자체의 기존 회귀 결과를 비교합니다." in js
+    assert "state.province=manifest.provinces[0]" not in js
