@@ -127,8 +127,8 @@ OLS는 패널 고정효과나 연도효과를 별도 통제하지 않습니다.*
 ## 데이터 재현성: 삭제해도 되는 폴더 / 안 되는 폴더
 
 **보존 필수:** `Statistics/`의 모든 2014–2022 원본 CSV와 자료 출처 기록,
-`build.py`·`expanded_analysis.py`·`unified_analysis.py`·
-`insurance_premiums.py`, `requirements.txt`, `site/`의 HTML/CSS/JS,
+`build.py`·`build.py`·`build.py`·
+`build.py`, `requirements.txt`, `site/`의 HTML/CSS/JS,
 `tests/`, `.github/`, `AGENTS.md`·`.agents/`, `.git/`.
 
 **삭제 후 다시 생성 가능:** `site/data/`, `site/raw/`,
@@ -184,9 +184,9 @@ python -m http.server 8000
 
 ```text
 build.py                   전체 분석 + 정적 사이트 생성
-expanded_analysis.py       인구·진료비 및 기존 분석
-insurance_premiums.py      보험료 정합성·세대수 결합
-unified_analysis.py        최종 6변수 및 6개 단순회귀 JSON 생성
+build.py       인구·진료비 및 기존 분석
+build.py      보험료 정합성·세대수 결합
+build.py        최종 6변수 및 6개 단순회귀 JSON 생성
 site/unified.html          통합 분석 화면
 site/index.html            기존 데이터 탐색 화면
 site/assets/js/sidebar.js  공통 사이드바
@@ -212,3 +212,8 @@ tests/                     기존·추가 분석 및 화면 계약 테스트
 
 장애인 등록인원 원본 17개는 [이전 연구 `milkywaypeko/ASD_FI_Correlation`](https://github.com/milkywaypeko/ASD_FI_Correlation)에서 사용한 **각 시도 「○○기본통계」 장애인 등록 표와 같은 KOSIS 표를 연도 범위만 달리하여 다시 추출**한 자료입니다. 기존 연구의 README에는 17개 시도의 KOSIS `orgId`/`tblId` 직접 링크와 2023.04.20 출처 기록이 남아 있습니다. 이번 연구는 원표의 2014–2022년 열을 사용합니다. 이는 옛 단일 연도 CSV를 그대로 복사했다는 뜻이 아니며, 통계표의 범위와 집계 기준은 지역별로 다를 수 있습니다. 정확한 17개 직접 인용 링크는 [KOSIS_SOURCES.md](KOSIS_SOURCES.md#시도별-장애인등록-kosis-원표-17개--이전-연구에서-이어진-자료-계보)에 정리했습니다.
 
+
+
+### 단일 Python 빌드 진입점
+
+정적 사이트 생성과 전체 통계 계산은 **`python build.py`** 한 파일로 실행합니다. 인구·의료비·보험료 전처리, 단순/다중 OLS, SciPy 상관분석, 통합 JSON 및 GitHub Pages 출력까지 `build.py`에 통합했습니다. 별도 분석용 Python 모듈은 필요하지 않습니다. 테스트는 `python -m pytest tests -q`로 실행합니다.
