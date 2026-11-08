@@ -340,7 +340,8 @@
     window.dispatchEvent(new CustomEvent('site-language-change',{detail:{language:code}}));
   }
   const sidebar=document.querySelector('.sidebar');
-  (sidebar?.querySelector('.sidebar-bottom') || sidebar || document.querySelector('.page-header') || document.body).prepend(switcher);
+  if (sidebar) sidebar.insertBefore(switcher,sidebar.querySelector('.navigation') || sidebar.firstChild);
+  else (document.querySelector('.page-header') || document.body).prepend(switcher);
   const observer=new MutationObserver(records=>{
     for (const record of records) {
       if (record.type==='characterData') updateText(record.target);
