@@ -7,7 +7,7 @@ HTML = (ROOT / "site/unified.html").read_text(encoding="utf-8")
 
 
 def _details_tag(id_):
-    found = re.search(r'<details\\b[^>]*\\bid="' + re.escape(id_) + r'"[^>]*>', HTML)
+    found = re.search(r'<details\b[^>]*\bid="' + re.escape(id_) + r'"[^>]*>', HTML)
     assert found is not None, id_
     return found.group(0)
 
@@ -19,7 +19,7 @@ def _details_body(id_):
 def test_statistical_raw_results_start_expanded():
     for id_, content_id in (("u-ols-raw-details", "u-raw"),
                             ("u-scipy-raw-details", "u-scipy-raw")):
-        assert re.search(r"\\bopen(?:\\s|>)", _details_tag(id_))
+        assert re.search(r"\bopen(?:\s|>)", _details_tag(id_))
         assert f'id="{content_id}"' in _details_body(id_)
 
 
@@ -28,7 +28,7 @@ def test_observation_raw_tables_start_collapsed():
         ("u-observation-details", "u-observation-body", "u-observation-count"),
         ("u-scipy-observation-details", "u-scipy-observation-body", "u-scipy-observation-count"),
     ):
-        assert not re.search(r"\\bopen(?:\\s|>)", _details_tag(id_))
+        assert not re.search(r"\bopen(?:\s|>)", _details_tag(id_))
         assert f'id="{table_id}"' in _details_body(id_)
         assert f'id="{count_id}"' in _details_body(id_)
 
