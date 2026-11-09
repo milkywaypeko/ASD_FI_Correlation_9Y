@@ -329,8 +329,15 @@
       [detail.columns,...detail.observations]
     );
   }
+  function resetRawDetails() {
+    // Each model opens the two compact statistical summaries by default.
+    for (const id of ['u-ols-raw-details', 'u-scipy-raw-details']) $(id).open = true;
+    // Long raw observations remain available without dominating the page.
+    for (const id of ['u-observation-details', 'u-scipy-observation-details']) $(id).open = false;
+  }
   async function select(item) {
     const token=++run;
+    resetRawDetails();
     selected=item;current=null;
     text('u-raw','상세 모형을 불러오는 중…');
     text('u-scipy-raw','SciPy 결과를 불러오는 중…');
