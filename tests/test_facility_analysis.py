@@ -18,9 +18,9 @@ def test_source_is_original_numeric_selection_and_q1_only():
     text = bz2.decompress(source.read_bytes()).decode('cp949')
     assert '2014.1/4' in text and '2022.1/4' in text
     assert '2026.2/4' not in text
-    for name in ('상급종합병원', '종합병원', '병원', '의원', '정신병원', '보건소'):
+    for name in ('계', '상급종합병원', '종합병원', '병원', '의원', '정신병원', '보건소'):
         assert name in text
-    assert '요양병원' in text  # Full original also retains unrelated categories.
+    assert '요양병원' in text  # full source keeps non-selected institution categories
     assert '요양병원' not in FACILITY_MODELS
 
 
@@ -31,6 +31,8 @@ def test_2021_psychiatric_introduced_never_backfilled():
     assert (2022, '서울특별시', '강남구', 'facility_clinic') in local
     assert local[(2022, '서울특별시', '강남구', 'facility_clinic')] == 1801
     assert provinces[(2022, '서울특별시', 'facility_clinic')] == 9264
+    assert local[(2022, '서울특별시', '강남구', 'facility_total')] == 3297
+    assert provinces[(2022, '서울특별시', 'facility_total')] == 23781
 
 
 def test_duplicate_district_names_keep_parent_province_and_rename():
@@ -54,8 +56,12 @@ def test_population_denominator_not_100k_or_total_count():
     gangnam = next(r for r in local if r['province']=='서울특별시' and r['district']=='강남구')
     provincial = [{'year':2022,'province':'서울특별시','district':'서울특별시','population':10_000_000}]
     audit = attach_facility_densities(ROOT/'Statistics', local, provincial)
+    assert gangnam['facility_total_count_q1'] == 3297
+    assert gangnam['facility_total_per_100k'] == pytest.approx(3297.0)
     assert gangnam['facility_clinic_count_q1'] == 1801
     assert gangnam['facility_clinic_per_100k'] == pytest.approx(1801.0)
+    assert provincial[0]['facility_total_count_q1'] == 23781
+    assert provincial[0]['facility_total_per_100k'] == pytest.approx(237.81)
     assert provincial[0]['facility_clinic_count_q1'] == 9264
     assert provincial[0]['facility_clinic_per_100k'] == pytest.approx(92.64)
     local.append({'year':2022, 'province':'서울특별시','district':'없는시군구','population':100_000})
@@ -100,3 +106,116 @@ def test_ols_and_scipy_use_same_population_normalized_pairs():
     assert item['coefficients'][0] == pytest.approx(0.005,abs=0.00001)
     assert detail['correlations']['scipy']['facility_clinic_per_100k']['raw'].startswith('PearsonRResult(')
     assert all(abs(row[-2]+row[-1]-row[3])<1e-9 for row in detail['observations'])
+
+
+def test_facility_dashboard_matches_unified_search_and_raw_contracts():
+    """Feature parity without changing the six-variable or other existing models."""
+    html = (ROOT/'site/facilities.html').read_text(encoding='utf-8')
+    js = (ROOT/'site/assets/js/facilities.js').read_text(encoding='utf-8')
+    for control in (
+        'f-model','f-type','f-scope','f-province','f-district','f-year','f-pooled',
+        'f-search','f-index-scope','f-all-types','f-all-regions','f-index-head',
+        'f-index-body','f-index-count','f-prev','f-next','f-index-export',
+        'f-adjr2','f-pmodel','f-coeff-body','f-scipy-body','f-scipy-export',
+        'f-scipy-observations-details','f-scipy-observation-body',
+        'f-observation-export','f-observation-body',
+    ):
+        assert 'id="'+control+'"' in html, control
+    assert '<option value="local_history">' in html
+    assert '<option value="national_municipal">' in html
+    assert 'id="f-ols-details" open' in html
+    assert 'id="f-scipy-details" open' in html
+    assert 'id="f-observations-details" open' not in html
+    assert 'id="f-scipy-observations-details" open' not in html
+    for key in ('coef','intercept','r2','adjr2','pcoef','pmodel','corr'):
+        assert f'id="f-trend-{key}"' in html
+    assert 'history.replaceState(' in js
+    assert 'function scoped(item)' in js
+    assert 'function drawIndex()' in js
+    assert 'function drawTrends(' in js
+    assert 'data/facility_index_' in js
+    assert "item.shard" in js
+    assert 'slice(0,150)' in js
+    assert 'detail.observations.map(r=>[r[0],r[1],r[2],r[4],r[3]])' in js
+    assert '...filtered.map(item=>' in js
+    assert '...detail.observations' in js
+    assert '...observations' in js
+    assert "'f-observations-details').open=false" in js
+    assert "'f-scipy-observations-details').open=false" in js
+    assert 'spanGaps:false' in js
+    assert 'data/facility_manifest.json' in js
+
+
+def test_facility_local_history_index_is_per_municipality_and_non_imputed(tmp_path, monkeypatch):
+    """Local history uses the actual (year, province, district) observations."""
+    import facility_analysis as facilities
+
+    raw_rows=[]
+    for year in range(2014,2023):
+        for district in ('강남구','강북구'):
+            raw_rows.append({'year':year, 'province':'서울특별시',
+                             'district':district, 'population':100000,
+                             'rates':{'자폐성':0.15+0.001*(year-2014)},})
+    province_rows=[]
+    def stub_attach(stats,local_rows,provinces):
+        for row in local_rows:
+            for name in facilities.FACILITY_MODELS:
+                row[name+'_per_100k']=float(row['year']-2014+1)
+                row[name+'_count_q1']=row['year']-2014+1
+        return {'normalization':'count / population × 100000'}
+    def stub_fit(rows,dtype,fields,scope,region,period,mode):
+        field=fields[0]
+        observations=[[r['year'],r['province'],r['district'],r['rates'][dtype],
+                       r[field],None,None] for r in rows]
+        return ({'scope':scope,'region':region,'year':period,'type':dtype,'mode':None,
+                 'n':len(rows),'intercept':None,'r2':None,'adj_r2':None,
+                 'p_model':None,'coefficients':[None],'pvalues':[None],
+                 'correlations':[None],'correlation_pvalues':[None],
+                 'warning':'stub'},
+                {'model':{'n':len(rows),'intercept':None,'coefficients':{},'r2':None,
+                          'adj_r2':None,'p_model':None,'raw':None,'warning':'stub'},
+                 'columns':['year','province','district','registered_rate_percent',field,
+                            'prediction_percent','residual_percentage_points'],
+                 'observations':observations,'notes':{},'correlations':{}})
+    monkeypatch.setattr(facilities,'attach_facility_densities',stub_attach)
+    facilities.build_facility_models(tmp_path,tmp_path,raw_rows,province_rows,['자폐성'],stub_fit)
+    import gzip
+    for name in facilities.FACILITY_MODELS:
+        idx=json.loads(gzip.decompress((tmp_path/'data'/f'facility_index_{name}.json.gz').read_bytes()))
+        histories=[r for r in idx if r['scope']=='local_history']
+        assert len(histories)==2
+        assert {r['region'] for r in histories} == {'서울특별시|강남구','서울특별시|강북구'}
+        assert all(r['year']=='전기간' for r in histories)
+        assert all(r['n']==(2 if name == 'facility_psychiatric' else 9) for r in histories)
+    manifest=json.loads((tmp_path/'data/facility_manifest.json').read_text())
+    assert manifest['districts']['서울특별시']==['강남구','강북구']
+
+
+def test_all_facilities_source_total_is_not_sum_of_selected_subtypes():
+    """KOSIS '계' includes pharmacies and many other provider categories."""
+    import csv
+    import io
+    data = bz2.decompress((ROOT/'Statistics'/SOURCE_REL).read_bytes()).decode('cp949')
+    rows = list(csv.DictReader(io.StringIO(data)))
+    seoul = {row['요양기관종별']:int(row['2022.1/4'])
+             for row in rows if row['시군구별']=='서울' and row['2022.1/4'].isdigit()}
+    assert seoul['계'] == sum(v for k,v in seoul.items() if k!='계')
+    assert '약국' in seoul and '한의원' in seoul and '치과의원' in seoul
+    assert seoul['계'] > sum(seoul[name] for name, _ in FACILITY_MODELS.values() if name!='계')
+    assert FACILITY_MODELS['facility_total'][0] == '계'
+
+def test_all_facilities_dashboard_category_is_distinct():
+    html = (ROOT/'site/facilities.html').read_text(encoding='utf8')
+    assert '원표의 전체 합계(계)' in html
+    assert '약국' in html
+
+
+def test_exact_user_supplied_kosis_citation_is_in_provenance_and_ui():
+    from facility_analysis import SOURCE_CITATION, SOURCE_URL
+    quoted = '국민건강보험공단, 건강보험심사평가원,「건강보험통계」, 2026 2/4, 2026.11.11, 시군구별 종별 요양기관 현황'
+    assert SOURCE_CITATION == quoted
+    assert SOURCE_URL == 'https://kosis.kr/statHtml/statHtml.do?orgId=354&tblId=DT_HIRA4B&conn_path=I2'
+    html = (ROOT/'site/facilities.html').read_text(encoding='utf-8')
+    assert quoted in html
+    assert '전체 요양기관(계)' in html
+    assert "facility_total" in FACILITY_MODELS

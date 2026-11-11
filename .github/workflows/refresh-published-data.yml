@@ -5,6 +5,7 @@ on:
     branches: [main]
     paths:
       - 'build.py'
+      - 'facility_analysis.py'
       - 'Statistics/**'
       - 'requirements.txt'
       - '.github/workflows/refresh-published-data.yml'

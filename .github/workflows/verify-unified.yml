@@ -59,7 +59,7 @@ jobs:
           fi
           git diff --name-only "$BASE" HEAD > /tmp/changed-paths.txt
           cat /tmp/changed-paths.txt
-          if grep -Eq '^(build\.py$|requirements\.txt$|Statistics/|\.github/workflows/)' /tmp/changed-paths.txt; then
+          if grep -Eq '^(build\.py$|facility_analysis\.py$|requirements\.txt$|Statistics/|\.github/workflows/)' /tmp/changed-paths.txt; then
             echo "full_build=true" >> "$GITHUB_OUTPUT"
             echo "Analysis inputs changed: full rebuild"
           else
@@ -126,13 +126,19 @@ jobs:
           # Independent facility density models, using exact source Q1 counts.
           fm=json.loads((root/'facility_manifest.json').read_text(encoding='utf-8'))
           assert set(fm['models']) == {
-              'facility_tertiary','facility_general','facility_hospital',
+              'facility_total','facility_tertiary','facility_general','facility_hospital',
               'facility_clinic','facility_psychiatric','facility_public_health'}
-          assert len(list((root/'facility_detail').rglob('*.json.gz'))) == 6 * 17
+          assert len(list((root/'facility_detail').rglob('*.json.gz'))) == 7 * 17
           for key,cfg in fm['models'].items():
               ix=json.loads(gzip.decompress((root/f'facility_index_{key}.json.gz').read_bytes()))
               assert ix and all(row['year']=='전기간' or row['year'] in cfg['years'] for row in ix)
               assert cfg['field'].endswith('_per_100k')
+              assert any(row['scope']=='local_history' for row in ix)
+              if key=='facility_total':
+                  assert cfg['category']=='계'
+                  assert cfg['years']==list(range(2014,2023))
+              if key=='facility_psychiatric':
+                  assert cfg['years']==[2021,2022]
               sample=next(row for row in ix if row['intercept'] is not None)
               detail=json.loads(gzip.decompress((Path('site')/sample['shard']).read_bytes()))[sample['id']]
               assert sample['n']==detail['model']['n']==len(detail['observations'])
