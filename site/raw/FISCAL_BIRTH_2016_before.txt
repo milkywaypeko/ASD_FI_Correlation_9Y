@@ -7,7 +7,7 @@ Dep. Variable:                      y   R-squared:                       0.029
 Model:                            OLS   Adj. R-squared:                  0.025
 Method:                 Least Squares   F-statistic:                     6.777
 Date:                Wed, 11 Nov 2026   Prob (F-statistic):            0.00985
-Time:                        10:19:09   Log-Likelihood:                -19.276
+Time:                        11:38:51   Log-Likelihood:                -19.276
 No. Observations:                 228   AIC:                             42.55
 Df Residuals:                     226   BIC:                             49.41
 Df Model:                           1                                         
@@ -35,7 +35,7 @@ Dep. Variable:                      y   R-squared:                       0.079
 Model:                            OLS   Adj. R-squared:                  0.039
 Method:                 Least Squares   F-statistic:                     1.982
 Date:                Wed, 11 Nov 2026   Prob (F-statistic):              0.173
-Time:                        10:19:09   Log-Likelihood:                 29.367
+Time:                        11:38:51   Log-Likelihood:                 29.367
 No. Observations:                  25   AIC:                            -54.73
 Df Residuals:                      23   BIC:                            -52.30
 Df Model:                           1                                         
@@ -63,7 +63,7 @@ Dep. Variable:                      y   R-squared:                       0.556
 Model:                            OLS   Adj. R-squared:                  0.524
 Method:                 Least Squares   F-statistic:                     17.54
 Date:                Wed, 11 Nov 2026   Prob (F-statistic):           0.000911
-Time:                        10:19:09   Log-Likelihood:                 3.5611
+Time:                        11:38:51   Log-Likelihood:                 3.5611
 No. Observations:                  16   AIC:                            -3.122
 Df Residuals:                      14   BIC:                            -1.577
 Df Model:                           1                                         
@@ -91,7 +91,7 @@ Dep. Variable:                      y   R-squared:                       0.601
 Model:                            OLS   Adj. R-squared:                  0.534
 Method:                 Least Squares   F-statistic:                     9.021
 Date:                Wed, 11 Nov 2026   Prob (F-statistic):             0.0239
-Time:                        10:19:09   Log-Likelihood:                 4.0424
+Time:                        11:38:51   Log-Likelihood:                 4.0424
 No. Observations:                   8   AIC:                            -4.085
 Df Residuals:                       6   BIC:                            -3.926
 Df Model:                           1                                         
@@ -119,7 +119,7 @@ Dep. Variable:                      y   R-squared:                       0.022
 Model:                            OLS   Adj. R-squared:                 -0.100
 Method:                 Least Squares   F-statistic:                    0.1808
 Date:                Wed, 11 Nov 2026   Prob (F-statistic):              0.682
-Time:                        10:19:09   Log-Likelihood:                 9.1247
+Time:                        11:38:51   Log-Likelihood:                 9.1247
 No. Observations:                  10   AIC:                            -14.25
 Df Residuals:                       8   BIC:                            -13.64
 Df Model:                           1                                         
@@ -147,7 +147,7 @@ Dep. Variable:                      y   R-squared:                       0.220
 Model:                            OLS   Adj. R-squared:                 -0.040
 Method:                 Least Squares   F-statistic:                    0.8457
 Date:                Wed, 11 Nov 2026   Prob (F-statistic):              0.426
-Time:                        10:19:09   Log-Likelihood:                 2.3678
+Time:                        11:38:51   Log-Likelihood:                 2.3678
 No. Observations:                   5   AIC:                           -0.7356
 Df Residuals:                       3   BIC:                            -1.517
 Df Model:                           1                                         
@@ -175,7 +175,7 @@ Dep. Variable:                      y   R-squared:                       0.817
 Model:                            OLS   Adj. R-squared:                  0.756
 Method:                 Least Squares   F-statistic:                     13.41
 Date:                Wed, 11 Nov 2026   Prob (F-statistic):             0.0352
-Time:                        10:19:09   Log-Likelihood:                 8.3668
+Time:                        11:38:51   Log-Likelihood:                 8.3668
 No. Observations:                   5   AIC:                            -12.73
 Df Residuals:                       3   BIC:                            -13.51
 Df Model:                           1                                         
@@ -203,7 +203,7 @@ Dep. Variable:                      y   R-squared:                       0.002
 Model:                            OLS   Adj. R-squared:                 -0.331
 Method:                 Least Squares   F-statistic:                  0.005357
 Date:                Wed, 11 Nov 2026   Prob (F-statistic):              0.946
-Time:                        10:19:09   Log-Likelihood:                 3.0662
+Time:                        11:38:51   Log-Likelihood:                 3.0662
 No. Observations:                   5   AIC:                            -2.132
 Df Residuals:                       3   BIC:                            -2.914
 Df Model:                           1                                         
@@ -231,7 +231,7 @@ Dep. Variable:                      y   R-squared:                       0.063
 Model:                            OLS   Adj. R-squared:                  0.031
 Method:                 Least Squares   F-statistic:                     1.960
 Date:                Wed, 11 Nov 2026   Prob (F-statistic):              0.172
-Time:                        10:19:09   Log-Likelihood:                 11.903
+Time:                        11:38:51   Log-Likelihood:                 11.903
 No. Observations:                  31   AIC:                            -19.81
 Df Residuals:                      29   BIC:                            -16.94
 Df Model:                           1                                         
@@ -259,7 +259,7 @@ Dep. Variable:                      y   R-squared:                       0.300
 Model:                            OLS   Adj. R-squared:                  0.257
 Method:                 Least Squares   F-statistic:                     6.873
 Date:                Wed, 11 Nov 2026   Prob (F-statistic):             0.0185
-Time:                        10:19:09   Log-Likelihood:                 3.0523
+Time:                        11:38:51   Log-Likelihood:                 3.0523
 No. Observations:                  18   AIC:                            -2.105
 Df Residuals:                      16   BIC:                           -0.3239
 Df Model:                           1                                         
@@ -287,7 +287,7 @@ Dep. Variable:                      y   R-squared:                       0.012
 Model:                            OLS   Adj. R-squared:                 -0.098
 Method:                 Least Squares   F-statistic:                    0.1090
 Date:                Wed, 11 Nov 2026   Prob (F-statistic):              0.749
-Time:                        10:19:09   Log-Likelihood:                0.17423
+Time:                        11:38:51   Log-Likelihood:                0.17423
 No. Observations:                  11   AIC:                             3.652
 Df Residuals:                       9   BIC:                             4.447
 Df Model:                           1                                         
@@ -315,7 +315,7 @@ Dep. Variable:                      y   R-squared:                       0.389
 Model:                            OLS   Adj. R-squared:                  0.343
 Method:                 Least Squares   F-statistic:                     8.293
 Date:                Wed, 11 Nov 2026   Prob (F-statistic):             0.0129
-Time:                        10:19:09   Log-Likelihood:                 4.4811
+Time:                        11:38:51   Log-Likelihood:                 4.4811
 No. Observations:                  15   AIC:                            -4.962
 Df Residuals:                      13   BIC:                            -3.546
 Df Model:                           1                                         
@@ -343,7 +343,7 @@ Dep. Variable:                      y   R-squared:                       0.073
 Model:                            OLS   Adj. R-squared:                 -0.004
 Method:                 Least Squares   F-statistic:                    0.9510
 Date:                Wed, 11 Nov 2026   Prob (F-statistic):              0.349
-Time:                        10:19:09   Log-Likelihood:                0.92323
+Time:                        11:38:51   Log-Likelihood:                0.92323
 No. Observations:                  14   AIC:                             2.154
 Df Residuals:                      12   BIC:                             3.432
 Df Model:                           1                                         
@@ -371,7 +371,7 @@ Dep. Variable:                      y   R-squared:                       0.037
 Model:                            OLS   Adj. R-squared:                 -0.011
 Method:                 Least Squares   F-statistic:                    0.7682
 Date:                Wed, 11 Nov 2026   Prob (F-statistic):              0.391
-Time:                        10:19:09   Log-Likelihood:                -3.9204
+Time:                        11:38:51   Log-Likelihood:                -3.9204
 No. Observations:                  22   AIC:                             11.84
 Df Residuals:                      20   BIC:                             14.02
 Df Model:                           1                                         
@@ -399,7 +399,7 @@ Dep. Variable:                      y   R-squared:                       0.000
 Model:                            OLS   Adj. R-squared:                 -0.047
 Method:                 Least Squares   F-statistic:                  0.005756
 Date:                Wed, 11 Nov 2026   Prob (F-statistic):              0.940
-Time:                        10:19:09   Log-Likelihood:                 7.5453
+Time:                        11:38:51   Log-Likelihood:                 7.5453
 No. Observations:                  23   AIC:                            -11.09
 Df Residuals:                      21   BIC:                            -8.820
 Df Model:                           1                                         
@@ -427,7 +427,7 @@ Dep. Variable:                      y   R-squared:                       0.098
 Model:                            OLS   Adj. R-squared:                  0.041
 Method:                 Least Squares   F-statistic:                     1.730
 Date:                Wed, 11 Nov 2026   Prob (F-statistic):              0.207
-Time:                        10:19:09   Log-Likelihood:                 5.4991
+Time:                        11:38:51   Log-Likelihood:                 5.4991
 No. Observations:                  18   AIC:                            -6.998
 Df Residuals:                      16   BIC:                            -5.217
 Df Model:                           1                                         
@@ -455,7 +455,7 @@ Dep. Variable:                      y   R-squared:                       0.141
 Model:                            OLS   Adj. R-squared:                  0.084
 Method:                 Least Squares   F-statistic:                     2.467
 Date:                Wed, 11 Nov 2026   Prob (F-statistic):              0.137
-Time:                        10:19:09   Log-Likelihood:                 5.4444
+Time:                        11:38:51   Log-Likelihood:                 5.4444
 No. Observations:                  17   AIC:                            -6.889
 Df Residuals:                      15   BIC:                            -5.222
 Df Model:                           1                                         
