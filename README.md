@@ -2,13 +2,13 @@
 
 **연구 기간 2014–2022 · 건강보험 관련 회귀 2015–2022 · Python statsmodels OLS · GitHub Pages 정적 사이트**
 
-[**대시보드 바로가기**](https://milkywaypeko.github.io/ASD_FI_Correlation_9Y/) · [원본 데이터 설명](Statistics/README.md) · [데이터 품질·연구 방법](site/quality.html) · [KOSIS 30개 원표·인용문·CSV 경로](KOSIS_SOURCES.md#사용자-제공-kosis-인용문직접-url저장-csv-대응표-20261108)
+[**대시보드 바로가기**](https://milkywaypeko.github.io/ASD_FI_Correlation_9Y/) · [원본 데이터 설명](Statistics/README.md) · [데이터 품질·연구 방법](site/quality.html) · [KOSIS 31개 원표·인용문·원본 경로](KOSIS_SOURCES.md#사용자-제공-kosis-인용문직접-url저장-csv-대응표-20261108)
 
 지역별 재정자립도, 인구구조, 합계출산율, 1인당 진료비, 가구당 건강보험료와 **선택한 장애유형의 등록률(%)** 사이의 통계적 연관성을 탐색하는 연구용 사이트입니다. 계산은 Python에서 사전 실행하며 브라우저에서는 생성된 정적 데이터만 읽습니다. **OLS는 인과관계를 입증하지 않습니다.**
 
-## KOSIS 출처 30건과 원자료 경로
+## KOSIS 출처 31건과 원자료 경로
 
-사용자가 제공한 2026.11.08 인용문·원표 URL 30개(기초 통계 5, 보험료 4, 진료비 4, 장애인등록 17)를 **해당 통계 CSV의 실제 저장소 경로와 함께** [KOSIS 출처 등록부](KOSIS_SOURCES.md)에 수록했습니다. [데이터 품질·연구 방법 페이지](site/quality.html#kosis-citations)에서도 인용문, KOSIS 링크, 원본 파일 경로를 나란히 확인할 수 있습니다. 인용문의 최신 통계 연도와 회귀분석 연도(2014–2022)는 다르며 최초 원본 CSV 다운로드일은 기록되지 않았습니다.
+기존 2026.11.08 인용문·원표 URL 30개(기초 통계 5, 보험료 4, 진료비 4, 장애인등록 17)에 **2026.11.11 요양기관 1개를 추가한 총 31개**를 **해당 원본 자료의 실제 저장소 경로와 함께** [KOSIS 출처 등록부](KOSIS_SOURCES.md)에 수록했습니다. [데이터 품질·연구 방법 페이지](site/quality.html#kosis-citations)에서도 인용문, KOSIS 링크, 원본 파일 경로를 나란히 확인할 수 있습니다. 인용문의 최신 통계 연도와 회귀분석 연도(2014–2022)는 다르며 최초 원본 CSV 다운로드일은 기록되지 않았습니다.
 
 ## 한국어 / English 전환
 
@@ -27,6 +27,7 @@
 | `site/unified.html?model=premium` | 가구당 건강보험료 단순회귀 |
 | `site/unified.html?model=fertility` | 합계출산율 단순회귀 |
 | `site/unified.html?model=fiscal` | 재정자립도 단순회귀 |
+| [`site/facilities.html`](site/facilities.html) | 요양기관 종별 **인구 10만 명당 밀도** × 장애인 등록률 단순회귀·비교표·OLS·SciPy RAW |
 | [`site/multivariate.html`](site/multivariate.html) | 기존 재정자립도·출산율 **2변수 다중회귀** (최종 6변수 모형과 별개) |
 | [`site/fiscal-birth.html`](site/fiscal-birth.html) | 기존 재정자립도 → 출산율 회귀 |
 | [`site/results.html`](site/results.html) | 기존 분석 결과표 |
@@ -238,7 +239,7 @@ GitHub Actions는 화면/번역/문서/테스트만 변경되면 전체 OLS 재�
 
 [요양기관 밀도 분석 화면](site/facilities.html)은 기본 장애유형을 **자폐성**으로 설정하고, 요양기관 종별 인구 10만 명당 시설 수와 장애인 등록률 간 단순회귀 및 SciPy 피어슨 상관분석을 제공합니다. 기존 7개 통합 회귀모형과 통계결과는 변경하지 않습니다.
 
-- **출처 및 기간:** 국민건강보험공단·건강보험심사평가원, 「건강보험통계」, 2026 2/4, 2026.11.11, 「시군구별 종별 요양기관 현황」 ([KOSIS DT_HIRA4B](https://kosis.kr/statHtml/statHtml.do?orgId=354&tblId=DT_HIRA4B&conn_path=I2)). 제공된 CSV에 실제 들어 있는 **2014~2022년 각 1분기** 기관 수를 사용합니다. 인용의 2026 2/4는 실제 회귀의 관측연도가 아닙니다.
+- **출처 및 기간:** 국민건강보험공단, 건강보험심사평가원,「건강보험통계」, 2026 2/4, 2026.11.11, 시군구별 종별 요양기관 현황 ([KOSIS DT_HIRA4B](https://kosis.kr/statHtml/statHtml.do?orgId=354&tblId=DT_HIRA4B&conn_path=I2)). 제공된 CSV에 실제 들어 있는 **2014~2022년 각 1분기** 기관 수를 사용합니다. 인용의 2026 2/4는 실제 회귀의 관측연도가 아닙니다.
 - **설명변수 X:** 각 지역·연도 1분기 해당 요양기관 수 ÷ 같은 지역·연도 주민등록인구 × **100,000** (단위: 개소/인구 10만 명).
 - **종속변수 Y:** 같은 지역·연도 장애유형별 등록률(%) = 등록인원 ÷ 주민등록인구 × 100.
 - **요양기관 유형:** 상급종합병원, 종합병원, 병원, 의원, 정신병원, 보건소. 유형별로 별도 비가중 OLS와 SciPy 피어슨 r·양측 p값·95% CI를 계산합니다. 실제 자폐 전문진료기관 여부는 확인할 수 없어 **의료 접근성의 대리지표**로만 해석해야 합니다.
@@ -246,5 +247,7 @@ GitHub Actions는 화면/번역/문서/테스트만 변경되면 전체 OLS 재�
 - **화면:** 연도·지역·장애유형 선택, 산점도/회귀선, 연도별 지표 추이, OLS·SciPy RAW 기본 펼침, 관측치 RAW 기본 접힘, 전체 CSV 다운로드.
 - **자료 보존:** 사용자가 제공한 CP949 CSV **전체 원본 바이트**를 값 변경 없이 bz2로 압축한 파일을 `Statistics/국가건강정보/요양기관/KOSIS_DT_HIRA4B_original_2014_2022_Q1_cp949.csv.bz2`에 저장했습니다. 압축 해제하면 업로드 원본 CSV와 바이트 단위로 일치합니다. 회귀에는 해당 원본의 6개 기관 종별 행만 선택하여 사용합니다.
 - **해석 제한:** 기관 수는 자폐 진료 여부나 수용능력의 직접 측정치가 아닙니다. 1분기 기관 수와 연간 등록률의 기준시점 차이, 지역 간 환자 이동, 혼란변수, 반복관측을 통제하지 않은 단순회귀를 고려하십시오. 인과관계를 입증하지 않습니다.
+
+**출처 표기 통일:** 신규 통계도 [KOSIS 출처 대응표](KOSIS_SOURCES.md)와 [데이터 품질·연구 방법 페이지](site/quality.html#kosis-citations)에 기존과 동일한 **제공된 인용문 / KOSIS 직접 URL / 저장소 원본 파일 경로** 3열로 등록했습니다.
 
 재계산: `python build.py` (기존 통계 전체와 신규 요양기관 통계를 함께 재생성). 신규 결과는 `site/data/facility_manifest.json`, `facility_index_*.json.gz`, `facility_detail/*/*.json.gz`, `facility_quality.json`에 생성됩니다.
