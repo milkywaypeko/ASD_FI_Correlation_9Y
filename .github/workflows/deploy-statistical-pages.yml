@@ -1,0 +1,87 @@
+name: Publish verified statistical site to GitHub Pages
+
+# GITHUB_TOKEN-authored source commits do not trigger branch-based Pages builds.
+# Explicitly deploy the already-generated outputs after a successful refresh.
+on:
+  workflow_run:
+    workflows:
+      - Refresh published statistical data after source-integrity changes
+    types: [completed]
+  push:
+    branches: [main]
+    paths:
+      - '.github/workflows/deploy-statistical-pages.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+concurrency:
+  group: pages-statistics-publish
+  cancel-in-progress: false
+
+jobs:
+  publish:
+    if: >-
+      (github.event_name == 'workflow_run' &&
+       github.event.workflow_run.conclusion == 'success' &&
+       github.event.workflow_run.head_branch == 'main') ||
+      (github.event_name == 'push' && github.ref == 'refs/heads/main') ||
+      github.event_name == 'workflow_dispatch'
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - name: Check out the latest published main
+        uses: actions/checkout@v4
+        with:
+          ref: main
+          persist-credentials: false
+
+      - name: Verify published facility statistics before deploying
+        shell: bash
+        run: |
+          python - <<'PY'
+          import gzip
+          import json
+          from pathlib import Path
+          root = Path('site/data')
+          assert Path('index.html').is_file(), 'Missing Pages homepage'
+          assert Path('site/facilities.html').is_file(), 'Missing facility analysis page'
+          assert Path('site/assets/js/facilities.js').is_file(), 'Missing facility JavaScript'
+          manifest = json.loads((root/'facility_manifest.json').read_text(encoding='utf-8'))
+          models = manifest['models']
+          assert len(models) == 6, f'Unexpected facility models: {list(models)}'
+          for model in models:
+              index_path = root / f'facility_index_{model}.json.gz'
+              assert index_path.is_file(), f'Missing {index_path}'
+              rows = json.loads(gzip.decompress(index_path.read_bytes()))
+              fitted = next((row for row in rows if row['intercept'] is not None), None)
+              assert fitted is not None, f'No fitted results for {model}'
+              detail_file = Path('site') / fitted['shard']
+              assert detail_file.is_file(), f'Missing {detail_file}'
+              detail = json.loads(gzip.decompress(detail_file.read_bytes()))[fitted['id']]
+              assert detail['model']['n'] == fitted['n'] == len(detail['observations'])
+          print('Facility OLS/SciPy JSON present and internally consistent')
+          PY
+
+      - name: Package only the published web files
+        run: |
+          mkdir -p _pages
+          cp index.html _pages/index.html
+          touch _pages/.nojekyll
+          cp -a site _pages/site
+          test -s _pages/site/data/facility_manifest.json
+
+      - name: Upload site artifact
+        uses: actions/upload-pages-artifact@v3
+        with:
+          path: _pages
+
+      - name: Deploy site explicitly
+        id: deployment
+        uses: actions/deploy-pages@v4
