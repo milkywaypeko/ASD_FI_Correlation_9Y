@@ -1,0 +1,5 @@
+.facility-scatter{position:relative;width:100%;height:380px;margin:14px 0}
+.facility-trend{position:relative;width:100%;height:270px;margin:14px 0}
+#f-status{line-height:1.7}
+#f-scope,#f-year,#f-model,#f-type,#f-province{min-width:175px}
+@media(max-width:680px){.facility-scatter{height:290px}.facility-trend{height:240px}}
