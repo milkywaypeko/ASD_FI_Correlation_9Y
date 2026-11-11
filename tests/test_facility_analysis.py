@@ -15,11 +15,12 @@ ROOT = Path(__file__).resolve().parents[1]
 
 def test_source_is_original_numeric_selection_and_q1_only():
     source = ROOT / 'Statistics' / SOURCE_REL
-    text = bz2.decompress(source.read_bytes()).decode('utf-8')
+    text = bz2.decompress(source.read_bytes()).decode('cp949')
     assert '2014.1/4' in text and '2022.1/4' in text
     assert '2026.2/4' not in text
     for name in ('상급종합병원', '종합병원', '병원', '의원', '정신병원', '보건소'):
         assert name in text
+    assert '요양병원' in text  # Full original also retains unrelated categories.
     assert '요양병원' not in FACILITY_MODELS
 
 

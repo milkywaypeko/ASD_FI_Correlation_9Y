@@ -1,6 +1,6 @@
 """Q1 healthcare-facility density vs registered-disability rate (static OLS).
 
-Input is a lossless selection of six institution-type rows from the user-provided
+Input is a full byte-preserved CP949 original of the user-provided
 KOSIS DT_HIRA4B CSV. Missing cells stay missing, not zero. The source's 2014–22
 first-quarter counts are paired to the corresponding calendar-year population
 and administrative disability-registration rate; the dates are not identical.
@@ -16,7 +16,7 @@ import math
 from collections import Counter, defaultdict
 from pathlib import Path
 
-SOURCE_REL = Path('국가건강정보/요양기관/ASD_facility_categories_2014_2022_Q1.csv.bz2')
+SOURCE_REL = Path('국가건강정보/요양기관/KOSIS_DT_HIRA4B_original_2014_2022_Q1_cp949.csv.bz2')
 SOURCE_URL = 'https://kosis.kr/statHtml/statHtml.do?orgId=354&tblId=DT_HIRA4B&conn_path=I2'
 SOURCE_CITATION = '국민건강보험공단·건강보험심사평가원, 「건강보험통계」, 시군구별 종별 요양기관 현황, KOSIS (2026.11.11 열람; 다운로드 자료는 2014–2022년 각 1분기)'
 # Institution types are capacity/access PROXIES, not ASD-specialist facility counts.
@@ -69,7 +69,7 @@ def read_facility_counts(path: Path):
     Subdistrict rows under a parent city are retained in the source map but
     never added to a parent city's count. Only exact disability keys are joined.
     """
-    with bz2.open(path, 'rt', encoding='utf-8', newline='') as stream:
+    with bz2.open(path, 'rt', encoding='cp949', newline='') as stream:
         rows = list(csv.DictReader(stream))
     cols = [f'{y}.1/4' for y in range(START_YEAR, END_YEAR + 1)]
     required = {'시군구별', '요양기관종별', *cols}
