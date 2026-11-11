@@ -6,6 +6,7 @@
 <link rel="stylesheet" href="assets/css/unified.css">
 <link rel="stylesheet" href="assets/css/facilities.css">
 <script defer src="https://cdn.jsdelivr.net/npm/chart.js@4.4.8/dist/chart.umd.min.js"></script>
+<script defer src="assets/js/chart-theme.js"></script>
 <script defer src="assets/js/facilities.js"></script>
 <script defer src="assets/js/sidebar.js"></script>
 <script defer src="assets/js/i18n.js"></script>
@@ -14,51 +15,85 @@
 <nav class="navigation" aria-label="주요 분석 메뉴"><a href="unified.html?model=six">최종 6변수 다중회귀</a></nav>
 <div class="sidebar-bottom"><p>통계 출처: KOSIS 건강보험통계 · 2014–2022년 1분기</p></div></aside>
 <main class="main-area">
-<header class="page-header"><div><div class="eyebrow">HEALTHCARE FACILITIES / SIMPLE REGRESSION</div>
-<h1>요양기관 밀도와 장애유형별 등록률</h1>
-<p class="lead">자폐성 장애의 진단·의료 접근성과 연관될 가능성이 있는 <strong>요양기관 종류별 인구 10만 명당 기관 수</strong>와 장애유형별 등록률의 지역 단순회귀입니다. 기본 장애유형은 자폐성입니다. 기관 종별만으로 자폐 전문 진료를 확인할 수 없으며, 상관관계는 인과관계가 아닙니다.</p></div>
-<div class="year-range"><span>2014 — 2022</span><div>STATSMODELS / SCIPY</div></div></header>
+<header class="page-header"><div><div class="eyebrow">HEALTHCARE FACILITIES / COMPLETE REGRESSION EXPLORER</div>
+<h1>요양기관 밀도와 장애유형별 등록률</h1><p class="lead">자폐성 장애의 진단·의료 접근성과 연관될 가능성이 있는 <strong>요양기관 종류별 인구 10만 명당 기관 수</strong>와 장애유형별 등록률을 비교하는 지역 단순회귀입니다. 기관 종별만으로 자폐 전문 진료를 확인할 수 없으며 상관관계는 인과관계가 아닙니다.</p></div>
+<div class="year-range"><span id="f-period-title">2014 — 2022</span><div>STATSMODELS OLS / SCIPY</div></div></header>
 <section class="filter-panel"><div class="filter-header"><h2>01 / 분석 조건</h2><span class="subtle">원본 CSV로 Python에서 사전 계산</span></div>
 <div class="filter-grid">
 <label>요양기관 종류<select id="f-model"></select></label>
 <label>장애유형<select id="f-type"></select></label>
-<label>분석 단위<select id="f-scope"><option value="municipal">기초지자체 간 비교</option><option value="provincial">광역지자체 간 비교</option></select></label>
+<label>분석 단위<select id="f-scope"><option value="municipal">기초지자체 간 비교</option><option value="provincial">광역지자체 간 비교</option><option value="local_history">기초지자체 연도별 변화</option></select></label>
 <label>광역지자체<select id="f-province"></select></label>
-<label>관측연도<select id="f-year"></select></label>
-</div><div class="time-row"><label class="switchlabel"><input type="checkbox" id="f-pooled"> 전체 기간 통합 (반복관측 주의)</label></div></section>
-<p class="panel-note" id="f-period-note">X는 해당 연도 1분기의 요양기관 수 ÷ 같은 연도·지역의 주민등록인구 × 100,000입니다. Y는 같은 연도의 장애유형 등록률(%). 동일 시점의 지표는 아닙니다.</p>
-<p class="panel-note" id="f-special-note">정신병원은 2021년 분류 신설로 2021~2022년만 분석합니다. 앞선 연도는 0으로 대체하지 않습니다.</p>
-<div class="section-top"><div><div class="eyebrow">02 / OLS AND PEARSON</div><h2>단순회귀 및 상관분석</h2></div><span class="pill" id="f-caption">불러오는 중…</span></div>
-<section class="kpi-grid">
-<div class="kpi"><div class="kpi-label">표본 n</div><div class="kpi-value" id="f-n">—</div></div>
-<div class="kpi"><div class="kpi-label">OLS 기울기 β₁</div><div class="kpi-value" id="f-slope">—</div><div class="kpi-foot">X가 인구 10만 명당 1개소 증가할 때 Y 변화량(%p)</div></div>
-<div class="kpi"><div class="kpi-label">OLS 기울기 p값(양측)</div><div class="kpi-value" id="f-pvalue">—</div></div>
-<div class="kpi"><div class="kpi-label">OLS 절편 β₀</div><div class="kpi-value" id="f-intercept">—</div></div>
-<div class="kpi"><div class="kpi-label">R² / 수정 R²</div><div class="kpi-value" id="f-r2">—</div></div>
-<div class="kpi"><div class="kpi-label">SciPy 피어슨 r</div><div class="kpi-value" id="f-pearson">—</div></div>
+<label>기초지자체<select id="f-district"></select></label>
+</div><div class="time-row"><label class="switchlabel"><input type="checkbox" id="f-pooled"> 전체 기간 통합</label>
+<div class="facility-year-wrap"><label for="f-year">관측연도 · <span id="f-year-label">2022년</span></label><input type="range" id="f-year" min="2014" max="2022" value="2022" step="1"><div class="facility-year-ticks"><span id="f-year-start">2014</span><span id="f-year-end">2022</span></div></div>
+</div></section>
+<p class="panel-note" id="f-period-note">X는 해당 연도 1분기 요양기관 수 ÷ 같은 지역·연도 주민등록인구 × 100,000입니다. Y는 동일 연도의 장애유형 등록률(%). 시점이 완전히 일치하지 않습니다.</p>
+<p class="panel-note" id="f-special-note" hidden>정신병원은 2021년 분류 신설로 2021~2022년만 분석합니다. 앞선 연도는 0으로 대체하지 않습니다.</p>
+<div class="section-top"><div><div class="eyebrow">02 / MODEL SUMMARY</div><h2>OLS 회귀 결과 · SciPy 상관분석</h2></div><span class="pill" id="f-caption">불러오는 중…</span></div>
+<section class="kpi-grid" aria-label="회귀 통계 카드">
+<div class="kpi"><div class="kpi-label">절편 β₀</div><div class="kpi-value" id="f-intercept">—</div></div>
+<div class="kpi"><div class="kpi-label">R² 결정계수</div><div class="kpi-value" id="f-r2">—</div></div>
+<div class="kpi"><div class="kpi-label">Adjusted R² 수정 결정계수</div><div class="kpi-value" id="f-adjr2">—</div></div>
+<div class="kpi"><div class="kpi-label">F검정 모형 p값</div><div class="kpi-value" id="f-pmodel">—</div></div>
+<div class="kpi"><div class="kpi-label">표본 수 n</div><div class="kpi-value" id="f-n">—</div></div>
+<div class="kpi"><div class="kpi-label">OLS 기울기 β₁</div><div class="kpi-value" id="f-slope">—</div><div class="kpi-foot">인구 10만 명당 1개소 증가당 등록률 변화 (%p)</div></div>
+<div class="kpi"><div class="kpi-label">OLS 기울기 β₁ p값(양측)</div><div class="kpi-value" id="f-pvalue">—</div></div>
+<div class="kpi"><div class="kpi-label">SciPy 피어슨 상관계수 r</div><div class="kpi-value" id="f-pearson">—</div></div>
 <div class="kpi"><div class="kpi-label">SciPy 양측 p값</div><div class="kpi-value" id="f-pearson-p">—</div></div>
 </section>
-<p class="panel-note" id="f-status" aria-live="polite">결과를 읽는 중입니다.</p>
-<section class="panel"><h2>03 / 실제 등록률과 회귀 적합선</h2>
-<div class="facility-scatter"><canvas id="f-scatter" aria-label="요양기관 수와 등록률 산점도"></canvas></div>
-<p class="subtle">X는 <strong>인구 10만 명당 해당 종별 요양기관 수(개소)</strong>, Y는 장애인 등록률(%)입니다. 점은 시군구 또는 시도별 실제 관측치, 선은 OLS 적합선입니다.</p></section>
-<section class="panel"><h2>04 / 연도별 분석 결과</h2>
-<div class="facility-trend"><canvas id="f-trend" aria-label="연도별 회귀 기울기와 피어슨 r"></canvas></div>
-<p class="subtle">연도별 독립 회귀이며 연도 통합 회귀의 반복관측 상관과 교란요인은 보정하지 않습니다. 불가능한 회귀는 보간하지 않습니다.</p>
-<button class="outline-button" id="f-trend-export" disabled>연도별 지표 CSV 저장</button></section>
-<section class="panel"><div class="panel-title-row"><h2>05 / 선택 모형의 원시 결과</h2><button class="outline-button" id="f-index-export" disabled>선택 기관 전체 결과 CSV 저장</button></div>
-<details class="u-raw-details" id="f-ols-details" open><summary>OLS RAW · statsmodels summary</summary>
-<pre class="u-raw" id="f-ols-raw">모형을 선택하세요.</pre></details>
-<details class="u-raw-details" id="f-scipy-details" open><summary>SciPy RAW · PearsonRResult / 95% 신뢰구간</summary>
+<p class="panel-note" id="f-status" aria-live="polite">분석 결과를 불러오는 중입니다.</p>
+<section class="panel"><h2>설명변수 회귀계수 β₁ 및 SciPy Pearson r</h2>
+<p class="subtle">OLS β는 X가 인구 10만 명당 1개소 늘어날 때 등록률 Y의 예상 차이(%p), Pearson r은 동일 완전관측치의 이변량 상관입니다. 두 값은 같지 않습니다.</p>
+<div class="u-table-wrap"><table><thead><tr><th>요양기관 종류</th><th>OLS β₁</th><th>OLS β₁ p값</th><th>OLS 95% CI</th><th>표준오차</th><th>r</th><th>SciPy p값</th><th>SciPy 95% CI</th><th>n</th></tr></thead><tbody id="f-coeff-body"></tbody></table></div></section>
+<section class="panel"><div class="panel-title-row"><div><div class="eyebrow">03 / OBSERVATIONS & FITTED LINE</div><h2>실제 등록률과 단순회귀 적합선</h2></div></div>
+<div class="facility-scatter"><canvas id="f-scatter" aria-label="요양기관 밀도와 장애인 등록률 산점도"></canvas></div>
+<p class="subtle">X는 인구 10만 명당 요양기관 수(개소), Y는 장애인 등록률(%). 청록색 점은 실제 관측치, 주황색 선은 OLS 단순회귀 적합선입니다. 유효 모형이 없으면 임의로 그리지 않습니다.</p></section>
+<section class="panel"><div class="panel-title-row"><div><h2>연도별 회귀지표 추이</h2><p class="subtle" id="f-trend-note">연도별 별도 회귀 결과이며, 추정 불가 시점은 보간하지 않습니다.</p></div><button class="outline-button" id="f-trend-export" disabled>연도별 지표 CSV 저장</button></div>
+<div id="f-annual-trends" class="u-trend-grid">
+<div><h3>기울기 β₁</h3><canvas id="f-trend-coef"></canvas></div>
+<div><h3>절편 β₀</h3><canvas id="f-trend-intercept"></canvas></div>
+<div><h3>R²</h3><canvas id="f-trend-r2"></canvas></div>
+<div><h3>수정 R²</h3><canvas id="f-trend-adjr2"></canvas></div>
+<div><h3>기울기 β₁ p값</h3><canvas id="f-trend-pcoef"></canvas></div>
+<div><h3>F검정 모형 p값</h3><canvas id="f-trend-pmodel"></canvas></div>
+<div><h3>피어슨 r</h3><canvas id="f-trend-corr"></canvas></div>
+</div>
+<div id="f-local-trend-wrap" class="facility-trend" hidden><canvas id="f-local-trend" aria-label="지역 연도별 요양기관 밀도 및 장애인 등록률 원관측치"></canvas></div>
+<p class="panel-note">연도 통합 OLS는 지자체별 반복관측 및 연도 효과를 통제하지 않습니다. 원시 p값을 임의 보간·변환하지 않습니다.</p></section>
+<div class="section-top"><div><div class="eyebrow">04 / COMPLETE REGRESSION INDEX</div><h2>시점·지역·장애유형별 회귀 통계표</h2></div></div>
+<section class="panel"><p>연도·지역·장애유형에 따라 실제 계산된 모든 회귀를 검색·정렬하고 상세 관측치를 확인할 수 있습니다.</p>
+<div class="u-index-controls">
+<label>연도·지역·장애유형 검색<input type="search" id="f-search" placeholder="연도, 지역, 장애유형"></label>
+<label>표 분석 단위<select id="f-index-scope"><option value="all">전체 분석 단위</option><option value="national_municipal">전국 기초지자체 통합 OLS만</option><option value="municipal">기초지자체 간 비교</option><option value="provincial">광역지자체 간 비교</option><option value="local_history">기초지자체 시계열</option></select></label>
+<label><input type="checkbox" id="f-all-types"> 전체 장애유형 결과 함께 비교</label>
+<label><input type="checkbox" id="f-all-regions"> 모든 광역지자체 결과 포함</label>
+<button class="outline-button" id="f-index-export" disabled>검색 결과 CSV 저장</button>
+</div>
+<p class="panel-note" id="f-index-definition" aria-live="polite">전국 기초지자체 통합 OLS는 해당 연도의 전체 기초지자체 완전관측치를 모아 적합한 하나의 모형입니다.</p>
+<div class="u-table-wrap"><table><thead id="f-index-head"></thead><tbody id="f-index-body"></tbody></table></div>
+<div class="u-pager"><span id="f-index-count">—</span><button id="f-prev" class="pager">이전</button><button id="f-next" class="pager">다음</button></div>
+</section>
+<section class="panel"><div class="panel-title-row"><div><h2 id="f-detail-header">선택 모형 · Raw·관측치</h2><p class="subtle" id="f-detail-title">비교표에서 모형을 선택하세요.</p></div><button class="outline-button" id="f-observation-export" disabled>전체 관측치 CSV 저장</button></div>
+<h3>SciPy Pearson r · p값 · 95% 신뢰구간</h3>
+<div class="u-table-wrap"><table><thead><tr><th>설명변수</th><th>r</th><th>SciPy 양측 p값</th><th>95% CI 하한</th><th>95% CI 상한</th><th>n</th><th>상태</th></tr></thead><tbody id="f-scipy-body"></tbody></table></div>
+<details class="u-raw-details" id="f-scipy-details" open><summary>SciPy RAW · PearsonRResult / ConfidenceInterval</summary>
 <pre class="u-raw" id="f-scipy-raw">모형을 선택하세요.</pre></details>
-<details class="u-raw-details" id="f-observations-details"><summary>실제 관측치 RAW · 적합값 · 잔차 펼치기</summary>
+<details class="u-raw-details" id="f-scipy-observations-details"><summary>SciPy 실제 X·Y 관측자료 펼치기</summary>
+<p class="subtle" id="f-scipy-observation-count"></p><div class="u-table-wrap"><table><thead><tr><th>연도</th><th>광역</th><th>기초</th><th>X 실제 요양기관 밀도</th><th>Y 실제 등록률(%)</th></tr></thead><tbody id="f-scipy-observation-body"></tbody></table></div></details>
+<button class="outline-button" id="f-scipy-export" disabled>SciPy 실제 X·Y 관측치 CSV 저장</button>
+<details class="u-raw-details" id="f-ols-details" open><summary>OLS RAW · statsmodels.OLS(...).fit().summary()</summary>
+<pre class="u-raw" id="f-ols-raw">모형을 선택하세요.</pre></details>
+<details class="u-raw-details" id="f-observations-details"><summary>완전관측치 · 적합값 · 잔차 펼치기</summary>
 <p class="subtle" id="f-observation-count"></p>
-<div class="u-table-wrap"><table><thead id="f-observation-head"></thead><tbody id="f-observation-body"></tbody></table></div></details>
-<button class="outline-button" id="f-observation-export" disabled>전체 관측치 CSV 저장</button></section>
-<section class="panel"><h2>06 / 자료 출처와 한계</h2>
+<div class="u-table-wrap"><table><thead id="f-observation-head"></thead><tbody id="f-observation-body"></tbody></table></div></details></section>
+<section class="panel"><div class="eyebrow">05 / SOURCE & LIMITATIONS</div><h2>자료 출처·변수 정의·연구 한계</h2>
 <p><strong>인용문:</strong> 국민건강보험공단, 건강보험심사평가원, 「건강보험통계」, 2026 2/4, 2026.11.11, 「시군구별 종별 요양기관 현황」.</p>
 <p><a href="https://kosis.kr/statHtml/statHtml.do?orgId=354&amp;tblId=DT_HIRA4B&amp;conn_path=I2" target="_blank" rel="noopener noreferrer">KOSIS 원표 DT_HIRA4B</a></p>
-<p>제공된 CSV는 2026년 수치가 아니라 <strong>2014~2022년 1분기</strong>를 담고 있습니다. 1분기 시점의 기관 수와 동일 연도의 주민등록인구·장애인 등록률을 짝지었습니다. 정신병원은 2021년 분류 신설로 앞선 자료가 결측입니다.</p>
-<p>상급종합병원·종합병원·병원·의원·정신병원·보건소의 전체 기관 수는 자폐성 장애 전문의료, 아동 진료 제공 여부, 수용능력 또는 서비스 질을 직접 나타내지 않습니다. 기관 소재지와 실제 이용자의 거주지가 다를 수 있습니다.</p>
-<p>행정적 장애등록률은 유병률이 아니며, 인구구조·지역소득·등록 접근성·도시화 등을 통제하지 않은 비가중 생태학적 단순회귀입니다. 결과는 인과적 해석에 사용할 수 없습니다.</p></section>
+<div class="u-table-wrap"><table><thead><tr><th>변수</th><th>계산식/단위</th><th>분모</th></tr></thead><tbody>
+<tr><td>설명변수 X</td><td>해당 연도 1분기 선택 기관 종류 개수 ÷ 해당 지역 주민등록인구 × 100,000 (개소/10만 명)</td><td>동일 연도·지역 주민등록인구</td></tr>
+<tr><td>등록률 Y</td><td>선택한 장애유형 등록인원 ÷ 해당 지역 주민등록인구 × 100 (%)</td><td>동일 연도·지역 주민등록인구</td></tr>
+</tbody></table></div>
+<p>업로드 CSV에는 <strong>2014~2022년 1분기</strong> 자료가 있습니다. 1분기 기관 수와 연간 등록률은 기준시점이 같지 않습니다. 정신병원은 2021년 분류 신설로 앞선 연도가 결측입니다.</p>
+<p>기관 종류는 자폐 전문 진료 여부·아동 진료 제공 여부·인력 및 수용능력을 확인하지 못합니다. 지역 간 환자 이동, 인구구조, 지역 소득·도시화·장애등록 접근성 등을 통제하지 않은 비가중 생태학적 단순회귀입니다. 등록률은 유병률이 아니며, 특히 개별 지자체 시계열과 전체기간 통합의 통계적 연관성은 인과관계로 해석할 수 없습니다.</p></section>
 </main></div></body></html>

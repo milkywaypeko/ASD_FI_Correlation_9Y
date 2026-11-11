@@ -20,7 +20,7 @@ def test_source_is_original_numeric_selection_and_q1_only():
     assert '2026.2/4' not in text
     for name in ('상급종합병원', '종합병원', '병원', '의원', '정신병원', '보건소'):
         assert name in text
-    assert '요양병원' in text  # Full original also retains unrelated categories.
+    assert '요양병원' in text  # full source keeps non-selected institution categories
     assert '요양병원' not in FACILITY_MODELS
 
 
@@ -100,3 +100,86 @@ def test_ols_and_scipy_use_same_population_normalized_pairs():
     assert item['coefficients'][0] == pytest.approx(0.005,abs=0.00001)
     assert detail['correlations']['scipy']['facility_clinic_per_100k']['raw'].startswith('PearsonRResult(')
     assert all(abs(row[-2]+row[-1]-row[3])<1e-9 for row in detail['observations'])
+
+
+def test_facility_dashboard_matches_unified_search_and_raw_contracts():
+    """Feature parity without changing the six-variable or other existing models."""
+    html = (ROOT/'site/facilities.html').read_text(encoding='utf-8')
+    js = (ROOT/'site/assets/js/facilities.js').read_text(encoding='utf-8')
+    for control in (
+        'f-model','f-type','f-scope','f-province','f-district','f-year','f-pooled',
+        'f-search','f-index-scope','f-all-types','f-all-regions','f-index-head',
+        'f-index-body','f-index-count','f-prev','f-next','f-index-export',
+        'f-adjr2','f-pmodel','f-coeff-body','f-scipy-body','f-scipy-export',
+        'f-scipy-observations-details','f-scipy-observation-body',
+        'f-observation-export','f-observation-body',
+    ):
+        assert 'id="'+control+'"' in html, control
+    assert '<option value="local_history">' in html
+    assert '<option value="national_municipal">' in html
+    assert 'id="f-ols-details" open' in html
+    assert 'id="f-scipy-details" open' in html
+    assert 'id="f-observations-details" open' not in html
+    assert 'id="f-scipy-observations-details" open' not in html
+    for key in ('coef','intercept','r2','adjr2','pcoef','pmodel','corr'):
+        assert f'id="f-trend-{key}"' in html
+    assert 'history.replaceState(' in js
+    assert 'function scoped(item)' in js
+    assert 'function drawIndex()' in js
+    assert 'function drawTrends(' in js
+    assert 'data/facility_index_' in js
+    assert "item.shard" in js
+    assert 'slice(0,150)' in js
+    assert 'detail.observations.map(r=>[r[0],r[1],r[2],r[4],r[3]])' in js
+    assert '...filtered.map(item=>' in js
+    assert '...detail.observations' in js
+    assert '...observations' in js
+    assert "'f-observations-details').open=false" in js
+    assert "'f-scipy-observations-details').open=false" in js
+    assert 'spanGaps:false' in js
+    assert 'data/facility_manifest.json' in js
+
+
+def test_facility_local_history_index_is_per_municipality_and_non_imputed(tmp_path, monkeypatch):
+    """Local history uses the actual (year, province, district) observations."""
+    import facility_analysis as facilities
+
+    raw_rows=[]
+    for year in range(2014,2023):
+        for district in ('강남구','강북구'):
+            raw_rows.append({'year':year, 'province':'서울특별시',
+                             'district':district, 'population':100000,
+                             'rates':{'자폐성':0.15+0.001*(year-2014)},})
+    province_rows=[]
+    def stub_attach(stats,local_rows,provinces):
+        for row in local_rows:
+            for name in facilities.FACILITY_MODELS:
+                row[name+'_per_100k']=float(row['year']-2014+1)
+                row[name+'_count_q1']=row['year']-2014+1
+        return {'normalization':'count / population × 100000'}
+    def stub_fit(rows,dtype,fields,scope,region,period,mode):
+        field=fields[0]
+        observations=[[r['year'],r['province'],r['district'],r['rates'][dtype],
+                       r[field],None,None] for r in rows]
+        return ({'scope':scope,'region':region,'year':period,'type':dtype,'mode':None,
+                 'n':len(rows),'intercept':None,'r2':None,'adj_r2':None,
+                 'p_model':None,'coefficients':[None],'pvalues':[None],
+                 'correlations':[None],'correlation_pvalues':[None],
+                 'warning':'stub'},
+                {'model':{'n':len(rows),'intercept':None,'coefficients':{},'r2':None,
+                          'adj_r2':None,'p_model':None,'raw':None,'warning':'stub'},
+                 'columns':['year','province','district','registered_rate_percent',field,
+                            'prediction_percent','residual_percentage_points'],
+                 'observations':observations,'notes':{},'correlations':{}})
+    monkeypatch.setattr(facilities,'attach_facility_densities',stub_attach)
+    facilities.build_facility_models(tmp_path,tmp_path,raw_rows,province_rows,['자폐성'],stub_fit)
+    import gzip
+    for name in facilities.FACILITY_MODELS:
+        idx=json.loads(gzip.decompress((tmp_path/'data'/f'facility_index_{name}.json.gz').read_bytes()))
+        histories=[r for r in idx if r['scope']=='local_history']
+        assert len(histories)==2
+        assert {r['region'] for r in histories} == {'서울특별시|강남구','서울특별시|강북구'}
+        assert all(r['year']=='전기간' for r in histories)
+        assert all(r['n']==(2 if name == 'facility_psychiatric' else 9) for r in histories)
+    manifest=json.loads((tmp_path/'data/facility_manifest.json').read_text())
+    assert manifest['districts']['서울특별시']==['강남구','강북구']
