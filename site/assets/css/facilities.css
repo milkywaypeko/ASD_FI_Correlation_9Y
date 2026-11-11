@@ -1,5 +1,12 @@
 .facility-scatter{position:relative;width:100%;height:380px;margin:14px 0}
-.facility-trend{position:relative;width:100%;height:270px;margin:14px 0}
+.facility-year-wrap{display:flex;flex-direction:column;min-width:220px;flex:1 1 300px;gap:8px}
+.facility-year-wrap input[type=range]{width:100%;accent-color:#138e96}
+.facility-year-ticks{display:flex;justify-content:space-between;color:#66768a;font-size:12px}
+.facility-trend{position:relative;width:100%;height:310px;margin:14px 0}
 #f-status{line-height:1.7}
-#f-scope,#f-year,#f-model,#f-type,#f-province{min-width:175px}
-@media(max-width:680px){.facility-scatter{height:290px}.facility-trend{height:240px}}
+#f-scope,#f-model,#f-type,#f-province,#f-district{min-width:175px}
+#f-index-body tr[data-selected="true"] td{background:#e9f4f7}
+#f-index-body button:focus-visible,#f-index-head button:focus-visible{outline:2px solid #138e96;outline-offset:3px}
+@media(max-width:680px){.facility-scatter{height:290px}.facility-trend{height:250px}.facility-year-wrap{min-width:180px}}
+/* UA [hidden] is otherwise overridden by authored grid/height display rules. */
+#f-annual-trends[hidden],#f-local-trend-wrap[hidden],#f-special-note[hidden]{display:none!important}

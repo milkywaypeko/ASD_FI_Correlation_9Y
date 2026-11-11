@@ -18,9 +18,12 @@ from pathlib import Path
 
 SOURCE_REL = Path('국가건강정보/요양기관/KOSIS_DT_HIRA4B_original_2014_2022_Q1_cp949.csv.bz2')
 SOURCE_URL = 'https://kosis.kr/statHtml/statHtml.do?orgId=354&tblId=DT_HIRA4B&conn_path=I2'
-SOURCE_CITATION = '국민건강보험공단·건강보험심사평가원, 「건강보험통계」, 시군구별 종별 요양기관 현황, KOSIS (2026.11.11 열람; 다운로드 자료는 2014–2022년 각 1분기)'
+SOURCE_CITATION = '국민건강보험공단, 건강보험심사평가원,「건강보험통계」, 2026 2/4, 2026.11.11, 시군구별 종별 요양기관 현황'
 # Institution types are capacity/access PROXIES, not ASD-specialist facility counts.
 FACILITY_MODELS = {
+    # Official source '계' is inclusive of pharmacies, dental/oriental clinics,
+    # public-health facilities, etc. Never sum the six selected subtypes.
+    'facility_total': ('계', '전체 요양기관(계)'),
     'facility_tertiary': ('상급종합병원', '상급종합병원'),
     'facility_general': ('종합병원', '종합병원'),
     'facility_hospital': ('병원', '병원'),
@@ -178,18 +181,23 @@ def build_facility_models(statistics_root: Path, output: Path,
                           disability_types: list[str], fit):
     """Build year-specific and pooled cross-regional simple OLS from real rows.
 
-    Deliberately omits local-history regression: at most 9 Q1 observations and
-    administrative time trends make naive significance especially misleading.
+    Local-history OLS is available for feature parity but is exploratory: at
+    most nine yearly observations (two for psychiatric hospitals). Never
+    interpret the pooled/within-region slope as a causal or longitudinal effect.
     """
     audit = attach_facility_densities(statistics_root, local_rows, provincial_rows)
     groups = defaultdict(list)
+    histories = defaultdict(list)
     for row in local_rows:
         groups[row['province']].append(row)
+        histories[(row['province'], row['district'])].append(row)
     years = list(range(START_YEAR, END_YEAR + 1))
     meta = {
         'types': disability_types,
         'models': {},
         'provinces': list(PROVINCES.values()),
+        'districts': {province: sorted({district for name, district in histories if name == province})
+                      for province in PROVINCES.values()},
         'source_url': SOURCE_URL,
         'citation': SOURCE_CITATION,
         'normalization': audit['normalization'],
@@ -199,6 +207,8 @@ def build_facility_models(statistics_root: Path, output: Path,
             '요양기관 종별은 자폐성 전문진료 기관 여부를 구별하지 않습니다.',
             '모형의 일부 기간 통합 분석은 반복관측과 연도 효과를 통제하지 않습니다.',
             '정신병원 분류는 2021년에 신설되어 2021–2022년만 분석합니다.',
+            '기초지자체 시계열 모형은 관측치 최대 9개이고 정신병원은 2개로 단순 OLS 자체가 추정 불가능할 수 있습니다.',
+            '전체 요양기관(계)은 KOSIS 원표 합계로, 약국·치과·한방·보건기관 등도 포함하며 순수 병·의원 합계가 아닙니다.',
         ],
     }
     for model, (category, label) in FACILITY_MODELS.items():
@@ -216,9 +226,16 @@ def build_facility_models(statistics_root: Path, output: Path,
         for type_index, dtype in enumerate(disability_types):
             path = f'data/facility_detail/{model}/{type_index:02d}.json.gz'
             details = {}
-            for period in (*model_years, '전기간'):
+            for period in (*model_years, '전기간', 'history'):
                 subsets = []
-                if period == '전기간':
+                model_period = '전기간' if period in ('전기간', 'history') else period
+                if period == 'history':
+                    subsets = [
+                        ('local_history', province + '|' + district,
+                         [row for row in rows if row['year'] in allowed])
+                        for (province, district), rows in sorted(histories.items())
+                    ]
+                elif period == '전기간':
                     all_local = [r for r in local_rows if r['year'] in allowed]
                     all_province = [r for r in provincial_rows if r['year'] in allowed]
                     subsets.append(('municipal', '전국', all_local))
@@ -233,7 +250,7 @@ def build_facility_models(statistics_root: Path, output: Path,
                         subsets.append(('municipal', name, [r for r in groups[name] if r['year'] == period]))
                     subsets.append(('provincial', '전국', all_province))
                 for scope, region, selected in subsets:
-                    item, detail = fit(selected, dtype, (field,), scope, region, period, None)
+                    item, detail = fit(selected, dtype, (field,), scope, region, model_period, None)
                     ident = str(len(index))
                     item.update(id=ident, shard=path)
                     # Show the raw facility count and original population next
