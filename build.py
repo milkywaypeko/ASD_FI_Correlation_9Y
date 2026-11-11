@@ -1756,6 +1756,10 @@ def build(base: Path, out: Path):
     birth_ols_audit = build_birth_ols(out, detail, province_rows)
     fiscal_birth_audit = build_fiscal_birth_ols(out, detail, province_rows)
     expanded_audit = build_expanded_analysis(stats, out, detail, province_rows, TYPES)
+    # Independent 2014–2022 Q1 facility-density simple regressions.
+    # Do not modify the seven established unified model specifications.
+    from facility_analysis import build_facility_models
+    facility_audit = build_facility_models(stats, out, detail, province_rows, TYPES, _fit)
     print(f"기존 분석 생성 소요: {time.perf_counter()-analysis_started:.1f}s", flush=True)
     unified_started = time.perf_counter()
     unified_audit = build_unified_analysis(out, detail, province_rows, TYPES)
@@ -1791,7 +1795,7 @@ def build(base: Path, out: Path):
                "special_note": "세종/제주는 광역합계 관측치를 기초 단일 관측치로 사용. 다른 시군구와 완전히 동일한 행정계층은 아님.",
                "multivariate": birth_audit, "birth_ols": birth_ols_audit,
                "fiscal_birth_ols": fiscal_birth_audit, "age_medical": expanded_audit,
-                "unified": unified_audit,
+               "facility": facility_audit, "unified": unified_audit,
                "fiscal_unit_note": "원본 재정자립도(0~100)를 Python 빌드시 100으로 나눠 0~1로 계산하며 CSV 원본은 수정하지 않음.",
                "method_note": "단순 OLS(상수항 포함); 연도 통합분석은 반복 측정과 연도 교란을 보정하지 않으므로 인과관계로 해석하지 말 것."}
     write_json(out / "data" / "quality.json", quality)
