@@ -15,7 +15,8 @@
       ['medical', '1인당 진료비', '▤'],
       ['premium', '가구당 건강보험료', '◉'],
       ['fertility', '합계출산율', '↗'],
-      ['fiscal', '재정자립도', '◇']
+      ['fiscal', '재정자립도', '◇'],
+      ['facilities.html', '요양기관 밀도 × 장애인 등록률', '✚']
     ]},
     {title: '기타 기존 분석', key: 'legacy', items: [
       ['multivariate.html', '재정·출산율 2변수 회귀', '∑'],

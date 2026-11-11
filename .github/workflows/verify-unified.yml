@@ -123,6 +123,20 @@ jobs:
                       assert scipy_result['reason']
                   assert r is None or -1.00000000001 <= r <= 1.00000000001
               assert 'OLS Regression Results' in detail['model']['raw']
+          # Independent facility density models, using exact source Q1 counts.
+          fm=json.loads((root/'facility_manifest.json').read_text(encoding='utf-8'))
+          assert set(fm['models']) == {
+              'facility_tertiary','facility_general','facility_hospital',
+              'facility_clinic','facility_psychiatric','facility_public_health'}
+          assert len(list((root/'facility_detail').rglob('*.json.gz'))) == 6 * 17
+          for key,cfg in fm['models'].items():
+              ix=json.loads(gzip.decompress((root/f'facility_index_{key}.json.gz').read_bytes()))
+              assert ix and all(row['year']=='전기간' or row['year'] in cfg['years'] for row in ix)
+              assert cfg['field'].endswith('_per_100k')
+              sample=next(row for row in ix if row['intercept'] is not None)
+              detail=json.loads(gzip.decompress((Path('site')/sample['shard']).read_bytes()))[sample['id']]
+              assert sample['n']==detail['model']['n']==len(detail['observations'])
+              assert detail['columns'][-2:]==['facility_count_q1','population']
           assert len(list((root/'unified_detail').rglob('*.json.gz'))) == 7 * 17
           assert not list((root/'unified_detail').rglob('*.json'))
           assert not list(root.glob('unified_index_*.json'))
@@ -130,9 +144,10 @@ jobs:
           site_files=[p for p in site.rglob('*') if p.is_file()]
           total_bytes=sum(p.stat().st_size for p in site_files)
           assert len(site_files)<500, f'Pages has too many files: {len(site_files)}'
-          # SciPy raw PearsonRResult + per-model 95% CI add about 13 MB to
-          # the previous 236 MB site; keep a finite safety ceiling for Pages.
-          assert total_bytes<280_000_000, f'Pages has too many bytes: {total_bytes}'
+          # Existing seven models plus optional facility-density shards currently
+          # require about 283 MB. Keep a 320 MB regression budget (well below
+          # GitHub Pages' 1 GB published-site limit) without dropping data.
+          assert total_bytes<320_000_000, f'Pages has too many bytes: {total_bytes}'
           print(f'PAGES PAYLOAD: {len(site_files)} files, {total_bytes:,} bytes')
           assert not list(root.glob('demographic_multi_models_*.json'))
           assert not list(root.glob('household_premium_multi_models_*.json'))
@@ -142,6 +157,7 @@ jobs:
         run: |
           node --check site/assets/js/unified.js
           node --check site/assets/js/chart-theme.js
+          node --check site/assets/js/facilities.js
       - name: Run all tests after regeneration
         if: steps.changes.outputs.full_build == 'true'
         run: python -m pytest tests -q
