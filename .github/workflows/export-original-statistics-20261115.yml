@@ -1,0 +1,114 @@
+name: Export source statistics and offline rebuild kit (temporary branch)
+
+on:
+  push:
+    branches:
+      - export/statistics-rebuild-kit-20261115
+    paths:
+      - .github/workflows/export-original-statistics-20261115.yml
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  make-archives:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - name: Build verified source and rebuild ZIP files
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+          from zipfile import ZipFile, ZIP_DEFLATED
+          import hashlib, json, bz2
+
+          root = Path('.')
+          sources = sorted(p for p in Path('Statistics').rglob('*') if p.is_file())
+          csv_files = [p for p in sources if p.suffix.lower() == '.csv']
+          facility = Path('Statistics/국가건강정보/요양기관/KOSIS_DT_HIRA4B_original_2014_2022_Q1_cp949.csv.bz2')
+          assert len(csv_files) == 30, f'Expected 30 original CSVs, got {len(csv_files)}'
+          assert facility.is_file(), 'Missing complete facility source'
+          assert len(sources) == 32, f'Expected 32 Statistics/ files, got {len(sources)}'
+          original_facility_csv = bz2.decompress(facility.read_bytes())
+          assert b'2014.1/4' in original_facility_csv, 'Facility source headers not found'
+          facility_sha = hashlib.sha256(original_facility_csv).hexdigest()
+          assert facility_sha == '52eecc3f3ebd598f552d154262314ed7524b0f89a244a07b9753bd583e0f03db', 'Uploaded facility CSV SHA does not match'
+          data_files = [p for p in sources if p.suffix.lower() == '.csv' or p == facility]
+          manifest = {
+              'repository': 'https://github.com/milkywaypeko/ASD_FI_Correlation_9Y',
+              'source_commit': 'c25122ab903e537156bb3072c36897608f37c837',
+              'source_folder': 'Statistics/',
+              'data_file_count': len(data_files),
+              'csv_file_count': len(csv_files),
+              'original_facility_file_sha256': facility_sha,
+              'files': [{
+                  'path': p.as_posix(),
+                  'size_bytes': p.stat().st_size,
+                  'sha256': hashlib.sha256(p.read_bytes()).hexdigest(),
+              } for p in sources],
+          }
+          assert len(data_files) == 31
+          contents = json.dumps(manifest, ensure_ascii=False, indent=2).encode('utf-8')
+          meta = Path('KOSIS_SOURCES.md')
+          readme = Path('README.md')
+          extr_path = 'REFERENCE_EXTRACTS/KOSIS_DT_HIRA4B_original_CP949.csv'
+          instructions = (
+              'ASD_FI_Correlation_9Y original source-data bundle\n'
+              'Statistics/ preserves all 30 CSV files byte-for-byte and the complete KOSIS facility data in bz2.\n'
+              'The CP949 facility CSV is also provided uncompressed in REFERENCE_EXTRACTS/ for convenience.\n'
+              'KOSIS_SOURCES.md records 30 original tables plus the facility table.\n'
+              'DATA_FILE_MANIFEST.json contains sha256 checksums for all original files.\n'
+              'Do not overwrite or translate the original CSVs. The downloaded source period is 2014-2022.\n'
+          ).encode('utf-8')
+          out = Path('dist')
+          out.mkdir(exist_ok=True)
+          with ZipFile(out/'ASD_FI_Correlation_9Y_original_statistics.zip','w',ZIP_DEFLATED,compresslevel=8) as z:
+              for p in sources:
+                  z.write(p,p.as_posix())
+              z.write(meta,meta.as_posix())
+              z.writestr('DATA_FILE_MANIFEST.json',contents)
+              z.writestr('README_SOURCE_BUNDLE.txt', instructions)
+              z.writestr(extr_path,original_facility_csv)
+          reference_metadata = [
+              'site/data/unified_manifest.json','site/data/facility_manifest.json',
+              'site/data/quality.json','site/data/facility_quality.json'
+          ]
+          allowed = []
+          for p in sorted(Path('.').rglob('*')):
+              if not p.is_file(): continue
+              rel=p.as_posix()
+              parts=p.parts
+              if any(x in parts for x in ('.git','dist','__pycache__','.pytest_cache','.venv')): continue
+              if rel.startswith(('site/data/','site/raw/')): continue
+              if rel=='.github/workflows/export-original-statistics-20261115.yml': continue
+              allowed.append(p)
+          with ZipFile(out/'ASD_FI_Correlation_9Y_rebuild_kit.zip','w',ZIP_DEFLATED,compresslevel=8) as z:
+              for p in allowed:
+                  z.write(p,p.as_posix())
+              for rel in reference_metadata:
+                  p=Path(rel)
+                  assert p.is_file(),rel
+                  z.write(p,'REFERENCE_GENERATED_METADATA/'+p.name)
+              z.writestr('DATA_FILE_MANIFEST.json',contents)
+              z.writestr(extr_path,original_facility_csv)
+              z.writestr('README_SOURCE_BUNDLE.txt',instructions)
+          for zip_path in out.glob('*.zip'):
+              with ZipFile(zip_path) as z:
+                  assert z.testzip() is None, f'Invalid ZIP: {zip_path}'
+                  for info in manifest['files']:
+                      extracted=z.read(info['path'])
+                      assert hashlib.sha256(extracted).hexdigest()==info['sha256'],info['path']
+                  assert len(z.read(extr_path))==len(original_facility_csv)
+                  print(zip_path, zip_path.stat().st_size, 'bytes',len(z.namelist()),'entries; source checksums verified')
+          PY
+      - name: Upload the two verified ZIPs
+        uses: actions/upload-artifact@v4
+        with:
+          name: ASD-FI-source-data-and-rebuild-kit
+          path: dist/*.zip
+          if-no-files-found: error
+          retention-days: 14
